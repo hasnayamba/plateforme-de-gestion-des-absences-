@@ -1,0 +1,64 @@
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-3">
+    <label for="mois">Mois</label>
+    <select id="mois" name="mois" class="form-select" onchange="this.form.submit()">
+      {% for numero, nom in mois_list %}
+        <option value="{{ numero }}" {% if mois_selectionne == numero %}selected{% endif %}>{{ nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label for="type">Type d'absence</label>
+    <select id="type" name="type" class="form-select" onchange="this.form.submit()">
+      <option value="">Tous</option>
+      {% for type in types %}
+        <option value="{{ type.id }}" {% if type_selectionne == type.id %}selected{% endif %}>{{ type.nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+</form>
+
+<div class="table-responsive">
+  <table class="table table-bordered table-striped align-middle text-center">
+    <thead class="table-light">
+      <tr>
+        <th>Collaborateur</th>
+        <th>Type</th>
+        <th>Dates</th>
+        <th>Durée</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for absence in absences_planifiees %}
+        <tr>
+          <td>{{ absence.collaborateur.get_full_name }}</td>
+          <td>{{ absence.type_absence.nom }}</td>
+          <td>{{ absence.date_debut|date:"d/m/Y" }} → {{ absence.date_fin|date:"d/m/Y" }}</td>
+          <td>{{ absence.nombre_jours }} jrs</td>
+          <td>
+            {% if absence.statut == 'en_attente' %}
+              <span class="badge bg-warning text-dark">En attente</span>
+            {% elif absence.statut == 'approuve_superieur' %}
+              <span class="badge bg-primary">Approuvé supérieur</span>
+            {% elif absence.statut == 'verifie_drh' %}
+              <span class="badge bg-info text-dark">Vérifié RH</span>
+            {% elif absence.statut == 'valide_dp' %}
+              <span class="badge bg-success">Validé DP</span>
+            {% elif absence.statut == 'rejete' %}
+              <span class="badge bg-danger">Rejeté</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ absence.get_statut_display }}</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="text-muted">Aucune absence planifiée pour ce mois.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

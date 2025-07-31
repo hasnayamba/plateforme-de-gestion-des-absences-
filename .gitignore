@@ -1,0 +1,66 @@
+# Environnement virtuel Python
+.venv/
+env/
+ENV/
+venv/
+
+# Fichiers de configuration sensibles
+*.env
+*.secret
+*.pem
+
+# Fichiers Python compilés
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Fichiers de logs
+*.log
+
+# Fichiers de base de données locaux
+*.sqlite3
+
+# Fichiers de migration inutiles (si tu veux les ignorer globalement – pas recommandé en prod)
+# **/migrations/*.py
+# !**/migrations/__init__.py
+
+# Fichiers de l’IDE
+.vscode/
+.idea/
+*.swp
+
+# Django static/media files (optionnel selon usage)
+staticfiles/
+media/
+static/
+
+# Collected static files
+static_root/
+media_root/
+
+# fichiers temporaires
+*.bak
+*.tmp
+*.orig
+.DS_Store
+Thumbs.db
+
+# fichiers de test / coverage
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.cache
+.pytest_cache/
+nosetests.xml
+test_db.sqlite3
+
+# fichiers pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# fichiers liés à docker (si utilisé)
+docker-compose.override.yml
+
+# fichiers liés à Azure (optionnel)
+startup.txt 

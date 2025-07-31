@@ -1,0 +1,40 @@
+<!-- includes/tableau_annuel.html -->
+<h5 class="mt-4 mb-3">Tableau annuel des absences validées</h5>
+<div class="table-responsive">
+    <table class="table table-bordered text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Employé</th>
+                {% for mois in mois_noms %}
+                    <th>{{ mois }}</th>
+                {% endfor %}
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+                <tr {% if forloop.counter0|divisibleby:2 %}style="background-color: #f8f9fa;"{% endif %}>
+                    <td class="text-start fw-bold">{{ ligne.user.get_full_name }}</td>
+                    {% for absences_mois in ligne.mois %}
+                        <td>
+                            {% if absences_mois %}
+                                {% for absence in absences_mois %}
+                                    <div class="mb-1">
+                                        <span class="badge"
+                                            style="background-color: {{ absence.type_absence.couleur }}">
+                                            {{ absence.type_absence.nom|slice:":2"|upper }}
+                                        </span><br>
+                                        <small>{{ absence.date_debut|date:"M d" }} → {{ absence.date_fin|date:"M d" }}</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td class="fw-bold">{{ ligne.total }} j</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

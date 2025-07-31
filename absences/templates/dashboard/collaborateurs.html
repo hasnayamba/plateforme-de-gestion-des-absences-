@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4">Bienvenue, {{ request.user.get_full_name }}</h2>
+
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+      <a href="{% url 'soumettre_absence' %}" class="text-decoration-none text-dark">
+        <div class="card shadow h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-pencil-square fs-1 text-primary"></i>
+            <h5 class="card-title mt-3">Soumettre une absence</h5>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a href="{% url 'mes_absences' %}" class="text-decoration-none text-dark">
+        <div class="card shadow h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-list-check fs-1 text-success"></i>
+            <h5 class="card-title mt-3">Mes absences</h5>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a href="{% url 'mon_quota' %}" class="text-decoration-none text-dark">
+        <div class="card shadow h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-pie-chart fs-1 text-warning"></i>
+            <h5 class="card-title mt-3">Mon quota</h5>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a href="{% url 'calendrier_absences' %}" class="text-decoration-none text-dark">
+        <div class="card shadow h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-calendar3 fs-1 text-danger"></i>
+            <h5 class="card-title mt-3">Calendrier</h5>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,92 @@
+<div class="container mt-4">
+  <h4>📋 Liste complète des absences</h4>
+
+  <form method="get" class="row g-2 align-items-end mb-4">
+<div class="col-md-3">
+  <label>Mois</label>
+  <select name="mois" class="form-select">
+  <option value="">Tous</option>
+  <option value="1" {% if mois_selectionne == "1" %}selected{% endif %}>Janvier</option>
+  <option value="2" {% if mois_selectionne == "2" %}selected{% endif %}>Février</option>
+  <option value="3" {% if mois_selectionne == "3" %}selected{% endif %}>Mars</option>
+  <option value="4" {% if mois_selectionne == "4" %}selected{% endif %}>Avril</option>
+  <option value="5" {% if mois_selectionne == "5" %}selected{% endif %}>Mai</option>
+  <option value="6" {% if mois_selectionne == "6" %}selected{% endif %}>Juin</option>
+  <option value="7" {% if mois_selectionne == "7" %}selected{% endif %}>Juillet</option>
+  <option value="8" {% if mois_selectionne == "8" %}selected{% endif %}>Août</option>
+  <option value="9" {% if mois_selectionne == "9" %}selected{% endif %}>Septembre</option>
+  <option value="10" {% if mois_selectionne == "10" %}selected{% endif %}>Octobre</option>
+  <option value="11" {% if mois_selectionne == "11" %}selected{% endif %}>Novembre</option>
+  <option value="12" {% if mois_selectionne == "12" %}selected{% endif %}>Décembre</option>
+</select>
+</div>
+
+
+
+    <div class="col-md-3">
+      <label>Type d’absence</label>
+      <select name="type" class="form-select">
+        <option value="">Tous</option>
+        {% for t in types %}
+          <option value="{{ t.id }}" {% if type_selectionne == t.id|stringformat:"s" %}selected{% endif %}>{{ t.nom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label>Statut</label>
+      <select name="statut" class="form-select">
+        <option value="">Tous</option>
+        {% for val, label in statuts %}
+          <option value="{{ val }}" {% if statut_selectionne == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Collaborateur</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Type</th>
+          <th>Dates</th>
+          <th>Raison</th>
+          <th>Justificatif</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for absence in absences %}
+        <tr>
+          <td>{{ absence.collaborateur.get_full_name }}</td>
+          <td>{{ absence.collaborateur.email }}</td>
+          <td>{{ absence.collaborateur.profile.get_role_display }}</td>
+          <td>{{ absence.type_absence.nom }}</td>
+          <td>{{ absence.date_debut }} → {{ absence.date_fin }} ({{ absence.nombre_jours }} j)</td>
+          <td>{{ absence.raison|default:"-" }}</td>
+          <td>
+            {% if absence.justificatif %}
+              <a href="{{ absence.justificatif.url }}" target="_blank">📎 Voir</a>
+            {% else %}
+              Aucun
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-{{ absence.statut|yesno:'success,danger,warning,secondary' }}">{{ absence.get_statut_display }}</span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">Aucune absence trouvée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3>📋 Tableau de bord - Directeur Pays</h3>
+<ul class="nav nav-tabs" id="dpTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="planifiees-tab" data-bs-toggle="tab" data-bs-target="#planifiees" type="button">🗓️ Absences planifiées</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="a-valider-tab" data-bs-toggle="tab" data-bs-target="#a-valider" type="button">🛠️ À valider</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="a-approuver-tab" data-bs-toggle="tab" data-bs-target="#a-approuver" type="button">✅ A aprouver</button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="calendrier-tab" data-bs-toggle="tab" data-bs-target="#calendrier" type="button">📅 Calendrier annuel</button>
+  </li>
+</ul>
+
+<div class="tab-content mt-3">
+  <div class="tab-pane fade show active" id="planifiees" role="tabpanel">
+    {% include 'dp/partials/absences_planifiees.html' %}
+  </div>
+  <div class="tab-pane fade" id="a-valider" role="tabpanel">
+    {% include 'dp/partials/absences_a_valider.html' %}
+  </div>
+    <div class="tab-pane fade" id="a-approuver" role="tabpanel">
+    {% include 'dp/partials/absences_a_approuver.html' %}
+  </div>
+  <div class="tab-pane fade" id="calendrier" role="tabpanel">
+    {% include 'dp/partials/calendrier_annuel.html' %}
+  </div>
+</div>
+{% endblock %}

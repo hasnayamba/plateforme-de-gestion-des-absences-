@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-4">👥 Gestion des utilisateurs</h3>
+
+<a href="{% url 'admin_user_create' %}" class="btn btn-success mb-3">➕ Ajouter un utilisateur</a>
+
+<table class="table table-bordered table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Nom complet</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Supérieur</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in utilisateurs %}
+        <tr>
+            <td>{{ user.get_full_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.profile.get_role_display }}</td>
+            <td>{{ user.profile.superieur.get_full_name|default:"—" }}</td>
+            <td>
+                {% if user.profile.actif %}
+                ✅ Actif
+                {% else %}
+                ❌ Inactif
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'admin_user_edit' user.id %}" class="btn btn-primary btn-sm">✏️ Modifier</a>
+                <!-- Supprimer si souhaité -->
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

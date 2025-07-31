@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>❗ Confirmer la suppression</h4>
+<p>Voulez-vous vraiment supprimer l'utilisateur <strong>{{ user_obj.get_full_name }}</strong> ?</p>
+
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">🗑 Supprimer</button>
+    <a href="{% url 'admin_users' %}" class="btn btn-secondary">Annuler</a>
+</form>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h3 class="text-center mb-4">📅 Calendrier des absences approuvées</h3>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <label for="typeFilter">Filtrer par type d'absence :</label>
+        <select id="typeFilter" class="form-select">
+            <option value="">Tous</option>
+            {% for t in types %}
+            <option value="{{ t.nom }}">{{ t.nom }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-6">
+        <label for="userFilter">Filtrer par collaborateur :</label>
+        <select id="userFilter" class="form-select">
+            <option value="">Tous</option>
+            {% for u in utilisateurs %}
+            <option value="{{ u.get_full_name }}">{{ u.get_full_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div id='calendar'></div>
+{% endblock %}
+
+{% block extra_js %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var calendarEl = document.getElementById('calendar');
+    var allEvents = {{ events_json|safe }};
+
+    function getFilteredEvents() {
+        var type = document.getElementById('typeFilter').value;
+        var user = document.getElementById('userFilter').value;
+        return allEvents.filter(event => {
+            return (!type || event.type === type) && (!user || event.collaborateur === user);
+        });
+    }
+
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        events: getFilteredEvents()
+    });
+
+    calendar.render();
+
+    document.getElementById('typeFilter').addEventListener('change', function () {
+        calendar.removeAllEvents();
+        calendar.addEventSource(getFilteredEvents());
+    });
+    document.getElementById('userFilter').addEventListener('change', function () {
+        calendar.removeAllEvents();
+        calendar.addEventSource(getFilteredEvents());
+    });
+});
+</script>
+{% endblock %}

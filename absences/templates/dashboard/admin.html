@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Tableau de bord - Collaborateur{% endblock %}
+
+{% block content %}
+<h2>Mes absences</h2>
+<p>Bienvenue sur votre tableau de bord, {{ user.first_name }}.</p>
+
+<a href="{% url 'demande_absence' %}" class="btn btn-primary mb-3">Faire une demande d'absence</a>
+
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Date début</th>
+            <th>Date fin</th>
+            <th>Statut</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for absence in absences %}
+        <tr>
+            <td>{{ absence.type_absence.nom }}</td>
+            <td>{{ absence.date_debut }}</td>
+            <td>{{ absence.date_fin }}</td>
+            <td>{{ absence.get_statut_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Aucune absence encore demandée.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tableau de bord Collaborateur{% endblock %}
+
+{% block content %}

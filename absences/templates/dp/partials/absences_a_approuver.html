@@ -1,0 +1,47 @@
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Collaborateur</th>
+      <th>Type</th>
+      <th>Dates</th>
+      <th>Raison</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for absence in absences %}
+    <tr>
+      <td>{{ absence.collaborateur.get_full_name }}</td>
+      <td>{{ absence.type_absence.nom }}</td>
+      <td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
+      <td>{{ absence.raison|default:"-" }}</td>
+      <td>
+        <a href="{% url 'valider_absence_dp' absence.id %}" class="btn btn-success btn-sm">Valider</a>
+        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#motifModal{{ absence.id }}">Rejeter</button>
+      </td>
+    </tr>
+
+    <!-- Modal motif de rejet -->
+    <div class="modal fade" id="motifModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="post" action="{% url 'rejeter_absence_dp' absence.id %}">
+            {% csrf_token %}
+            <div class="modal-header">
+              <h5 class="modal-title">Motif du rejet</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <textarea name="motif" class="form-control" rows="4" placeholder="Indiquer le motif du rejet" required></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-danger">Rejeter</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </tbody>
+</table>

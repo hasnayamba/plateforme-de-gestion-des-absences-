@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h3>🔐 Changer votre mot de passe</h3>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label>Nouveau mot de passe :</label>
+            <input type="password" name="nouveau_mdp" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Confirmer le mot de passe :</label>
+            <input type="password" name="confirm_mdp" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">✅ Enregistrer</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+<div class="row">
+  {% for numero, nom in mois_list %}
+  <div class="col-md-4 mb-3">
+    <div class="card">
+      <div class="card-header bg-light">
+        <strong>{{ nom }}</strong>
+      </div>
+      <div class="card-body">
+        {% for absence in absences_validees %}
+          {% if absence.date_debut.month == numero %}
+            <p><strong>{{ absence.collaborateur.get_full_name }}</strong><br>
+              {{ absence.type_absence.nom }} : {{ absence.date_debut }} → {{ absence.date_fin }}</p>
+          {% endif %}
+        {% empty %}
+          <p>Aucune absence</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>

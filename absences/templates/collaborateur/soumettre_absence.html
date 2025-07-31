@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Carte du formulaire -->
+            <div class="card shadow rounded-4 border-0">
+                <div class="card-header bg-success text-white rounded-top-4">
+                    <h4 class="mb-0">Demande d’absence</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Type d'absence -->
+                        <div class="mb-3">
+                            <label for="type_absence" class="form-label">Type d’absence <span class="text-danger">*</span></label>
+                            <select name="type_absence" id="type_absence" class="form-select" required>
+                                <option value="">-- Sélectionnez un type --</option>
+                                {% for type in types_absence %}
+                                    <option value="{{ type.id }}">{{ type.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Date de début -->
+                        <div class="mb-3">
+                            <label for="date_debut" class="form-label">Date de début <span class="text-danger">*</span></label>
+                            <input type="date" name="date_debut" id="date_debut" class="form-control" required>
+                        </div>
+
+                        <!-- Nombre de jours -->
+                        <div class="mb-3">
+                            <label for="nombre_jours" class="form-label">Nombre de jours <span class="text-danger">*</span></label>
+                            <input type="number" name="nombre_jours" id="nombre_jours" class="form-control" min="1" required>
+                        </div>
+
+                        <!-- Raison -->
+                        <div class="mb-3">
+                            <label for="raison" class="form-label">Raison de l’absence</label>
+                            <textarea name="raison" id="raison" class="form-control" rows="3" placeholder="Expliquez brièvement la raison..."></textarea>
+                        </div>
+
+                        <!-- Justificatif -->
+                        <div class="mb-4">
+                            <label for="justificatif" class="form-label">Justificatif (optionnel)</label>
+                            <input type="file" name="justificatif" id="justificatif" class="form-control">
+                        </div>
+
+                        <!-- Bouton de soumission -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-send me-1"></i> Soumettre la demande
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Affichage des messages -->
+            {% if messages %}
+                <div class="mt-4">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const dateInput = document.getElementById('date_debut');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.setAttribute('min', today); // Bloque les jours passés
+
+    const joursFeries = {{ jours_feries|safe }}; // injecté par Django
+
+    dateInput.addEventListener('input', function () {
+        const selectedDate = new Date(this.value);
+        const day = selectedDate.getDay();
+        const formattedDate = this.value;
+
+        if (day === 0 || day === 6) {
+            alert("Les weekends ne sont pas autorisés.");
+            this.value = '';
+            return;
+        }
+
+        if (joursFeries.includes(formattedDate)) {
+            alert("Ce jour est un jour férié.");
+            this.value = '';
+            return;
+        }
+    });
+});
+</script>
+
+
+{% endblock %}

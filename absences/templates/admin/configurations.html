@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+    <h3 class="text-center mb-4">⚙️ Configuration de l'application</h3>
+
+    <div class="row">
+        <!-- Bloc 1 : Années -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Années</strong>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalAnnee">Ajouter</button>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for annee in annees %}
+                        <li class="list-group-item">{{ annee.annee }}</li>
+                        {% empty %}
+                        <li class="list-group-item">Aucune année</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+       
+        <!-- Bloc 3 : Jours fériés -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Jours fériés</strong>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalJourFerie">Ajouter</button>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for jf in jours_feries %}
+                        <li class="list-group-item">{{ jf.date }} - {{ jf.description }}</li>
+                        {% empty %}
+                        <li class="list-group-item">Aucun jour férié</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloc 4 : Types d'absence -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Types d'absence</strong>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalTypeAbsence">Ajouter</button>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for t in types_absence %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ t.nom }}
+                            <span class="badge" style="background-color: {{ t.couleur }};">&nbsp;&nbsp;&nbsp;</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">Aucun type</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Ajouter Année -->
+<div class="modal fade" id="modalAnnee" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header"><h5 class="modal-title">Ajouter une année</h5></div>
+      <div class="modal-body">
+        <input type="number" name="annee" class="form-control" placeholder="Ex : 2025" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" name="ajouter_annee" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal : Ajouter Jour Férié -->
+<div class="modal fade" id="modalJourFerie" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header"><h5 class="modal-title">Ajouter un jour férié</h5></div>
+      <div class="modal-body">
+        <input type="date" name="date" class="form-control mb-2" required>
+        <input type="text" name="description" class="form-control" placeholder="Nom du jour férié" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" name="ajouter_jourferie" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal : Ajouter Type d'absence -->
+<div class="modal fade" id="modalTypeAbsence" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header"><h5 class="modal-title">Ajouter un type d'absence</h5></div>
+      <div class="modal-body">
+        <input type="text" name="nom" class="form-control mb-2" placeholder="Nom du type" required>
+        <input type="color" name="couleur" class="form-control form-control-color" title="Choisir une couleur" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" name="ajouter_typeabsence" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

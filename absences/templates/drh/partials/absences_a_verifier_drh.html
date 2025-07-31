@@ -1,0 +1,31 @@
+{% if absences_a_verifier %}
+<table class="table table-bordered table-striped">
+  <thead>
+    <tr>
+      <th>Collaborateur</th>
+      <th>Type</th>
+      <th>Dates</th>
+      <th>Justificatif</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for absence in absences_a_verifier %}
+    <tr>
+      <td>{{ absence.collaborateur.get_full_name }}</td>
+      <td>{{ absence.type_absence.nom }}</td>
+      <td>{{ absence.date_debut }} au {{ absence.date_fin }} ({{ absence.nombre_jours }} jours)</td>
+      <td>
+        {% if absence.justificatif %}<a href="{{ absence.justificatif.url }}" target="_blank">📎 Voir</a>{% else %}Aucun{% endif %}
+      </td>
+      <td>
+        <a href="{% url 'verifier_absence' absence.id %}" class="btn btn-success btn-sm">Vérifier</a>
+        <a href="{% url 'rejeter_absence_drh' absence.id %}" class="btn btn-danger btn-sm">Rejeter</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">Aucune absence à vérifier.</p>
+{% endif %}

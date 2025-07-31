@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="text-center mb-4">🗂️ Gestion des Quotas d’Absences</h3>
+
+    <!-- Bouton pour ouvrir le modal -->
+    <div class="text-end mb-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quotaModal">➕ Ajouter / Modifier Quota</button>
+    </div>
+
+    <!-- Tableau des quotas existants -->
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Collaborateur</th>
+                <th>Type d'absence</th>
+                <th>Année</th>
+                <th>Jours disponibles</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quota in quotas %}
+            <tr>
+                <td>{{ quota.user.get_full_name }}</td>
+                <td>{{ quota.type_absence.nom }}</td>
+                <td>{{ quota.annee }}</td>
+                <td>{{ quota.jours_disponibles }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">Aucun quota défini.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="quotaModal" tabindex="-1" aria-labelledby="quotaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title" id="quotaModalLabel">Ajouter / Modifier Quota</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="collaborateur" class="form-label">Collaborateur</label>
+                    <select name="collaborateur" class="form-select" required>
+                        <option value="">-- Choisir --</option>
+                        {% for u in collaborateurs %}
+                        <option value="{{ u.id }}">{{ u.get_full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="type_absence" class="form-label">Type d'absence</label>
+                    <select name="type_absence" class="form-select" required>
+                        <option value="">-- Choisir --</option>
+                        {% for t in types %}
+                        <option value="{{ t.id }}">{{ t.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="annee" class="form-label">Année</label>
+                    <select name="annee" class="form-select" required>
+                        <option value="">-- Choisir --</option>
+                        {% for a in annees %}
+                        <option value="{{ a.annee }}">{{ a.annee }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="jours_disponibles" class="form-label">Jours disponibles</label>
+                    <input type="number" name="jours_disponibles" min="0" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-success">💾 Enregistrer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

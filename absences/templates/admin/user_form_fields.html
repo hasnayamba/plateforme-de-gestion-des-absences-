@@ -1,0 +1,85 @@
+
+
+<div class="container mt-4">
+
+  <form method="POST">
+    {% csrf_token %}
+
+    <!-- Nom & Prénom -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Nom :</label>
+        <input type="text" name="nom" class="form-control" id="{% if is_edit %}edit_nom{% endif %}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Prénom :</label>
+        <input type="text" name="prenom" class="form-control" id="{% if is_edit %}edit_prenom{% endif %}" required>
+      </div>
+    </div>
+
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Email :</label>
+       <input type="email" name="email" class="form-control" id="{% if is_edit %}edit_email{% endif %}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Nom d'utilisateur :</label>
+        <input type="text" name="username" class="form-control"  id="{% if is_edit %}edit_username{% endif %}" required>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Poste :</label>
+        <input type="text" name="poste" class="form-control" id="{% if is_edit %}edit_role{% endif %}" required>
+      </div>
+      <div class="col-md-6">
+          <label class="form-label">Rôle :</label>
+          <select name="role" class="form-select" required>
+            {% for value, label in roles %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+      </div>
+    </div>
+
+   <div class="row mb-3">
+      <div class="col-md-6">
+         <label class="form-label">Supérieur hiérarchique :</label>
+          <select name="superieur" class="form-select">
+            <option value="">— Aucun —</option>
+            {% for sup in superieurs %}
+            <option value="{{ sup.id }}">{{ sup.get_full_name }}</option>
+            {% endfor %}
+          </select>
+      </div>
+      <div class="col-md-6">
+           <label class="form-label">Année :</label>
+          <select name="annee" class="form-select" required>
+            {% for a in annees %}
+            <option value="{{ a.annee }}">{{ a.annee }}</option>
+            {% endfor %}
+          </select>
+      </div>
+    </div>
+
+    <!-- Quotas par type d'absence -->
+    <div class="mb-3">
+      <label class="form-label">Quota par type d'absence :</label>
+      {% for t in types %}
+      <div class="input-group mb-1">
+        <span class="input-group-text">{{ t.nom }}</span>
+        <input type="number" name="quota" class="form-control" value="0" required>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Boutons -->
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-success me-2">✅ Enregistrer</button>
+      <a href="{% url 'admin_users' %}" class="btn btn-secondary">↩️ Annuler</a>
+    </div>
+  </form>
+</div>
+

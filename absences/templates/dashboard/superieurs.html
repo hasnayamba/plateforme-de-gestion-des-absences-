@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Tableau de bord - Supérieur hiérarchique{% endblock %}
+
+{% block content %}
+<h2>Demandes d'absence à approuver</h2>
+<p>Bienvenue {{ user.first_name }}, voici les demandes de vos collaborateurs.</p>
+
+{% if absences %}
+<table class="table table-bordered table-hover">
+    <thead class="thead-dark">
+        <tr>
+            <th>Collaborateur</th>
+            <th>Type d'absence</th>
+             <th>Raison</th>
+            <th>Début</th>
+            <th>Fin</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for absence in absences %}
+        <tr>
+            <td>{{ absence.collaborateur.get_full_name }}</td>
+            <td>{{ absence.type_absence.nom }}</td>
+            <td>{{ absence.raison }}</td>
+            <td>{{ absence.date_debut }}</td>
+            <td>{{ absence.date_fin }}</td>
+            <td>
+                <form action="{% url 'approuver_absence' absence.id %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Approuver</button>
+                </form>
+                <!-- Tu pourras ajouter un bouton "Refuser" ici plus tard -->
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">Aucune demande d'absence en attente.</div>
+{% endif %}
+{% endblock %}

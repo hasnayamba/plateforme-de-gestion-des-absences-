@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<h3 class="mb-4">👩‍💼 Tableau de bord DRH</h3>
+<!-- Onglets -->
+<ul class="nav nav-tabs" id="drhTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="calendrier-tab" data-bs-toggle="tab" data-bs-target="#calendrier" type="button" role="tab">📅 Calendrier</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="a-verifier-tab" data-bs-toggle="tab" data-bs-target="#a-verifier" type="button" role="tab">📋 À vérifier</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="validees-tab" data-bs-toggle="tab" data-bs-target="#validees" type="button" role="tab">✅ Validées par DP</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="a-approuver-tab" data-bs-toggle="tab" data-bs-target="#a-approuver" type="button" role="tab">🕒 À approuver (DP)</button>
+  </li>
+</ul>
+<div class="tab-content mt-3">
+  <div class="tab-pane fade show active" id="calendrier" role="tabpanel">
+    <!-- includes/tableau_annuel.html -->
+<h5 class="mt-4 mb-3">Tableau annuel des absences validées</h5>
+<div class="table-responsive">
+    <table class="table table-bordered text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Employé</th>
+                {% for mois in mois_noms %}
+                    <th>{{ mois }}</th>
+                {% endfor %}
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+                <tr {% if forloop.counter0|divisibleby:2 %}style="background-color: #f8f9fa;"{% endif %}>
+                    <td class="text-start fw-bold">{{ ligne.user.get_full_name }}</td>
+                    {% for absences_mois in ligne.mois %}
+                        <td>
+                            {% if absences_mois %}
+                                {% for absence in absences_mois %}
+                                    <div class="mb-1">
+                                        <span class="badge"
+                                            style="background-color: {{ absence.type_absence.couleur }}">
+                                            {{ absence.type_absence.nom|slice:":2"|upper }}
+                                        </span><br>
+                                        <small>{{ absence.date_debut|date:"M d" }} → {{ absence.date_fin|date:"M d" }}</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td class="fw-bold">{{ ligne.total }} j</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+  </div>
+
+  <div class="tab-pane fade" id="a-verifier" role="tabpanel">
+    {% include 'drh/partials/absences_a_verifier_drh.html' %}
+  </div>
+
+  <div class="tab-pane fade" id="validees" role="tabpanel">
+    {% include 'drh/partials/absences_validees_dp.html' %}
+  </div>
+
+  <div class="tab-pane fade" id="a-approuver" role="tabpanel">
+    {% include 'drh/partials/absences_a_approuver.html' %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}
+
+

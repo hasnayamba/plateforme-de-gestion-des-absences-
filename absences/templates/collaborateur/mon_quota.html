@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Mes quotas d'absences</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Type d'absence</th>
+        <th>Année</th>
+        <th>Jours disponibles</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for quota in quotas %}
+      <tr>
+        <td>{{ quota.type_absence.nom }}</td>
+        <td>{{ quota.annee }}</td>
+        <td>{{ quota.jours_disponibles }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
