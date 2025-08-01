@@ -65,16 +65,18 @@ WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 
 
 # Base de données PostgreSQL sur Azure
-import os
 import dj_database_url
+import os
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
+        default='postgres://bvrfwrfblf:YTl9i%24zCkt3AA2aJ@gestionabsencesapp-server.postgres.database.azure.com:5432/gestionabsencesappdb',
         conn_max_age=600,
         ssl_require=True
     )
 }
+
+
 
 
 
