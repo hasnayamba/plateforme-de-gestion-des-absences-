@@ -30,13 +30,17 @@ for pair in connection_string.split(' '):
     parameters[key] = value
 
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': parameters['PGDATABASE'],  # Nom de la base de données
-        'USER': parameters['PGUSER'],  # Utilisateur PostgreSQL
-        'PASSWORD': parameters['PGPASSWORD'],  # Mot de passe PostgreSQL
-        'HOST': parameters['PGHOST'],  # Adresse du serveur PostgreSQL
-        'PORT': parameters['PGPORT'],  # Port du serveur PostgreSQL
+        'NAME': parameters['dbname'],
+        'USER': parameters['user'],
+        'PASSWORD': parameters['password'],
+        'HOST': parameters['host'],
+        'PORT': parameters['port'],
+        'OPTIONS': {
+            'sslmode': parameters.get('sslmode', 'require'),
+        },
     }
 }

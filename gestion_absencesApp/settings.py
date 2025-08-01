@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
     # Pour les tests locaux uniquement (jamais en prod)
-    SECRET_KEY = "oWl4%z9r8tk2q3q0lzhn+9%&3w@z7b7b$+vmu^z4rp9t5!qhpb"
+    SECRET_KEY = "qhO106Ry4B"
     
 
 # --- Mode DEBUG ---

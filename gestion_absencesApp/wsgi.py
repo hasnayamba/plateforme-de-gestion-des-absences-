@@ -11,7 +11,7 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-settings_module = 'gestion_absencesApp.settings' if ' WEBSITE_HOSTNAME' in os.environ else 'gestion_absencesApp.deployment'
+settings_module = 'gestion_absencesApp.deployment' if 'WEBSITE_HOSTNAME' in os.environ else 'gestion_absencesApp.settings'
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_module)
 
