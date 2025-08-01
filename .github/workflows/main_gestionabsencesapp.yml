@@ -35,6 +35,15 @@ jobs:
       - name: Run collectstatic
         run: python manage.py collectstatic --noinput
         
+
+      - name: Run migrations
+        run: python manage.py migrate
+
+      - name: Create superuser
+        run: echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@example.com', '94649092@Hiy')" | python manage.py shell
+
+
+        
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
       - name: Upload artifact for deployment jobs
