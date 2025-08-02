@@ -68,14 +68,14 @@ WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bdabsences',  # ➤ comme dans PGDATABASE
-        'USER': 'postgres',  # ⚠️ Azure exige le "@nomserveur"
-        'PASSWORD': '1234',
-        'HOST': 'localhost',
+        'NAME': 'gestionabsencesappdb',  # ➤ comme dans PGDATABASE
+        'USER': 'bvrfwrfblf',  # ⚠️ Azure exige le "@nomserveur"
+        'PASSWORD': 'YTl9i$zCkt3AA2aJ',
+        'HOST': 'gestionabsencesapp-server.postgres.database.azure.com',
         'PORT': '5432',
-        # 'OPTIONS': {
-        #     'sslmode': 'require',
-        # },
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
     }
 }
 
