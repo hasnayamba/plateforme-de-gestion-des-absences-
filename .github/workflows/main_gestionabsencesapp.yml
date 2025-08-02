@@ -19,6 +19,11 @@ jobs:
       - name: Export AZURE_POSTGRESQL_CONNECTIONSTRING
         run: echo "AZURE_POSTGRESQL_CONNECTIONSTRING=${{ secrets.AZURE_POSTGRESQL_CONNECTIONSTRING }}" >> $GITHUB_ENV
 
+      - name: Export SECRET and WEBSITE_HOSTNAME
+        run: |
+          echo "SECRET=${{ secrets.SECRET }}" >> $GITHUB_ENV
+          echo "WEBSITE_HOSTNAME=${{ secrets.WEBSITE_HOSTNAME }}" >> $GITHUB_ENV
+
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
