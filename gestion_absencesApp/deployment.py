@@ -35,11 +35,11 @@ url = urlparse(connection_string)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': url.path[1:],  # retire le slash initial
-        'USER': url.username,
-        'PASSWORD': url.password,
-        'HOST': url.hostname,
-        'PORT': url.port,
+        'NAME': 'gestionabsencebd',  # retire le slash initial
+        'USER': 'adminazure',
+        'PASSWORD': '94649092Hiy',
+        'HOST': 'gestionabsencesapp-public.postgres.database.azure.com',
+        'PORT': '5432',
     }
 }
 
