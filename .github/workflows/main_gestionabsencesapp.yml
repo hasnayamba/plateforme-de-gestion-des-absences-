@@ -32,6 +32,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Set environment variable
+        run: echo "DJANGO_SETTINGS_MODULE=gestion_absencesApp.deployment" >> $GITHUB_ENV
+
+
       - name: Run collectstatic
         run: python manage.py collectstatic --noinput
         

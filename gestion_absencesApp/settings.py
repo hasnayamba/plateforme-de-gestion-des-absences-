@@ -62,8 +62,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 
-
-
 # Base de données PostgreSQL sur Azure
 from urllib.parse import urlparse
 import os
