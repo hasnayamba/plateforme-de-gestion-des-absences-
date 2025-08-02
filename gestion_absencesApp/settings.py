@@ -65,19 +65,27 @@ WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 
 
 # Base de données PostgreSQL sur Azure
+from urllib.parse import urlparse
+import os
+
+connection_string = os.environ.get('AZURE_POSTGRESQL_CONNECTIONSTRING')
+if not connection_string:
+    raise RuntimeError("❌ La variable AZURE_POSTGRESQL_CONNECTIONSTRING n'est pas définie. Vérifie tes secrets GitHub ou la config Azure.")
+
+url = urlparse(connection_string)
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'gestionabsencesappdb',  # ➤ comme dans PGDATABASE
-        'USER': 'bvrfwrfblf',  # ⚠️ Azure exige le "@nomserveur"
-        'PASSWORD': 'YTl9i$zCkt3AA2aJ',
-        'HOST': 'gestionabsencesapp-server',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
+        'NAME': url.path[1:],  # retire le slash initial
+        'USER': url.username,
+        'PASSWORD': url.password,
+        'HOST': url.hostname,
+        'PORT': url.port,
     }
 }
+
 
 
 
