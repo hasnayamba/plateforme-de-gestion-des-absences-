@@ -71,7 +71,7 @@ DATABASES = {
         'NAME': 'gestionabsencesappdb',  # ➤ comme dans PGDATABASE
         'USER': 'bvrfwrfblf',  # ⚠️ Azure exige le "@nomserveur"
         'PASSWORD': 'YTl9i$zCkt3AA2aJ',
-        'HOST': 'gestionabsencesapp-server.postgres.database.azure.com',
+        'HOST': 'gestionabsencesapp-server',
         'PORT': '5432',
         'OPTIONS': {
             'sslmode': 'require',
