@@ -65,18 +65,19 @@ WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 
 
 # Base de données PostgreSQL sur Azure
-import dj_database_url
-import os
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgres://bvrfwrfblf:YTl9i%24zCkt3AA2aJ@gestionabsencesapp-server.postgres.database.azure.com:5432/gestionabsencesappdb',
-        conn_max_age=600,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bdabsences',  # ➤ comme dans PGDATABASE
+        'USER': 'postgres',  # ⚠️ Azure exige le "@nomserveur"
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '5432',
+        # 'OPTIONS': {
+        #     'sslmode': 'require',
+        # },
+    }
 }
-
-
 
 
 
