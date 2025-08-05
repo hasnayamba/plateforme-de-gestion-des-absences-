@@ -2,6 +2,7 @@
 {% block content %}
 <div class="container mt-4">
   <h3>Mes demandes d’absence</h3>
+
   <table class="table table-bordered table-hover">
     <thead class="table-light">
       <tr>
@@ -10,6 +11,7 @@
         <th>Au</th>
         <th>Jours</th>
         <th>Statut</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -20,11 +22,117 @@
         <td>{{ absence.date_fin }}</td>
         <td>{{ absence.nombre_jours }}</td>
         <td><span class="badge bg-secondary">{{ absence.get_statut_display }}</span></td>
+        <td>
+          <!-- Bouton Modifier -->
+          {% if absence.statut in 'en_attente,approuve_superieur,verifie_drh'.split(',') %}
+            <button type="button" class="btn btn-sm btn-info mb-1" data-bs-toggle="modal" data-bs-target="#modifierModal{{ absence.id }}">
+              Modifier
+            </button>
+          {% endif %}
+
+          <!-- Bouton Annuler -->
+          {% if absence.statut != 'annulee' and not absence.annulee_par_collaborateur %}
+            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#annulerModal{{ absence.id }}">
+              Annuler
+            </button>
+          {% endif %}
+        </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="5">Aucune absence soumise.</td></tr>
+
+      <!-- MODALE MODIFIER -->
+      <div class="modal fade" id="modifierModal{{ absence.id }}" tabindex="-1" aria-labelledby="modifierModalLabel{{ absence.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+          <form method="post" action="{% url 'modifier_absence' absence.id %}">
+            {% csrf_token %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modifierModalLabel{{ absence.id }}">Modifier absence</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="type{{ absence.id }}" class="form-label">Type d'absence</label>
+                  <select class="form-select" name="type_absence" id="type{{ absence.id }}">
+                    {% for type in types_absence %}
+                      <option value="{{ type.id }}" {% if type.id == absence.type_absence.id %}selected{% endif %}>{{ type.nom }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Date de début</label>
+                  <input type="date" name="date_debut" class="form-control" value="{{ absence.date_debut|date:'Y-m-d' }}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Date de fin</label>
+                  <input type="date" name="date_fin" class="form-control" value="{{ absence.date_fin|date:'Y-m-d' }}">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODALE ANNULER -->
+      <div class="modal fade" id="annulerModal{{ absence.id }}" tabindex="-1" aria-labelledby="annulerModalLabel{{ absence.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+          <form method="post" action="{% url 'annuler_absence' absence.id %}">
+            {% csrf_token %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="annulerModalLabel{{ absence.id }}">Annuler l’absence</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="motif_annulation{{ absence.id }}" class="form-label">Motif d’annulation</label>
+                 <textarea class="form-control" name="motif" id="motif_annulation{{ absence.id }}" rows="3" required></textarea>
+
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-danger">Confirmer l’annulation</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% endblock %}
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const dateInput = document.getElementById('date_debut');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.setAttribute('min', today); // Bloque les jours passés
+
+    const joursFeries = {{ jours_feries|safe }}; // injecté par Django
+
+    dateInput.addEventListener('input', function () {
+        const selectedDate = new Date(this.value);
+        const day = selectedDate.getDay();
+        const formattedDate = this.value;
+
+        if (day === 0 || day === 6) {
+            alert("Les weekends ne sont pas autorisés.");
+            this.value = '';
+            return;
+        }
+
+        if (joursFeries.includes(formattedDate)) {
+            alert("Ce jour est un jour férié.");
+            this.value = '';
+            return;
+        }
+    });
+});
+</script>

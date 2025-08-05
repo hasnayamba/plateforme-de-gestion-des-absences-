@@ -14,6 +14,8 @@ ROLES = (
     ('dp', 'Directeur Pays'),
     ('superieur', 'Supérieur hiérarchique'),
     ('collaborateur', 'Collaborateur'),
+    ('rejete', 'Rejeté'),
+    ('annulee', 'Annulée par le collaborateur'),
 )
 # The `STATUT_ABSENCE` constant is a tuple of tuples that defines different status options for an
 # absence in the system. Each tuple consists of two elements: the key representing the status and the
@@ -143,6 +145,9 @@ class Absence(models.Model):
     ), default='en_attente')
 
     justificatif = models.FileField(upload_to='justificatifs/', blank=True, null=True)
+    annulee_par_collaborateur = models.BooleanField(default=False)
+    motif_annulation = models.TextField(blank=True, null=True)
+
 
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)

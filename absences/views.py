@@ -166,6 +166,7 @@ def soumettre_absence(request):
         nombre_jours = request.POST.get('nombre_jours')
         raison = request.POST.get('raison')
         justificatif = request.FILES.get('justificatif')
+        
 
         if not type_id or not date_debut or not nombre_jours:
             messages.error(request, "Tous les champs obligatoires doivent être remplis.")
@@ -208,6 +209,107 @@ def soumettre_absence(request):
         'types_absence': types_absence,
         'jours_feries': jours_feries,
     })
+    
+# -----------------------------
+# Annuler une absence
+# -----------------------------
+    
+@login_required
+def annuler_absence(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+
+    if absence.collaborateur != request.user:
+        messages.error(request, "Vous n'êtes pas autorisé à annuler cette absence.")
+        return redirect('mes_absences')
+
+    if request.method == 'POST':
+        motif = request.POST.get('motif')
+        absence.annulee_par_collaborateur = True
+        absence.motif_annulation = motif
+        absence.statut = 'annulee'
+        absence.save()
+
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            action='annulee_par_collaborateur',
+            commentaire=f"Motif : {motif}"
+        )
+
+        # TODO : notifier le supérieur et l’admin par mail ou sur la plateforme
+        messages.success(request, "Votre demande a été annulée avec succès.")
+        return redirect('mes_absences')
+
+    return render(request, 'collaborateur/soumettre_absence.html', {
+        'absence': absence
+    })
+    
+    
+
+# -----------------------------
+# quota d'absence
+# -----------------------------
+    
+@login_required
+def modifier_absence(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+
+    if absence.collaborateur != request.user:
+        messages.error(request, "Vous n'avez pas l'autorisation de modifier cette demande.")
+        return redirect('mes_absences')
+
+    if absence.statut not in ['en_attente', 'approuve_superieur', 'verifie_drh']:
+        messages.error(request, "Cette demande ne peut plus être modifiée.")
+        return redirect('mes_absences')
+
+    if request.method == 'POST':
+        type_id = request.POST.get('type_absence')
+        date_debut = request.POST.get('date_debut')
+        nombre_jours = request.POST.get('nombre_jours')
+        raison = request.POST.get('raison')
+        justificatif = request.FILES.get('justificatif')
+
+        try:
+            absence.type_absence = TypeAbsence.objects.get(id=type_id)
+            absence.date_debut = datetime.strptime(date_debut, "%Y-%m-%d").date()
+            absence.nombre_jours = float(nombre_jours)
+            absence.raison = raison
+            if justificatif:
+                absence.justificatif = justificatif
+
+            # Réinitialise le statut
+            absence.statut = 'en_attente'
+            absence.approuve_par_superieur = False
+            absence.verifie_par_drh = False
+            absence.valide_par_dp = False
+            absence.save()
+
+            ValidationHistorique.objects.create(
+                absence=absence,
+                utilisateur=request.user,
+                action='modifiee_par_collaborateur',
+                commentaire="Demande modifiée par le collaborateur"
+            )
+
+            messages.success(request, "Demande d'absence modifiée avec succès.")
+            return redirect('mes_absences')
+
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification : {e}")
+            return redirect(request.path)
+
+    types_absence = TypeAbsence.objects.all()
+     # Partie GET (affichage du formulaire)
+    jours_feries_qs = JourFerie.objects.all()
+    jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
+
+    return render(request, 'collaborateur/soumettre_absence.html', {
+        'absence': absence,
+        'types_absence': types_absence,
+        'jours_feries': jours_feries,
+    })
+
+
 
 # -----------------------------
 # quota d'absence
