@@ -13,9 +13,7 @@ ROLES = (
     ('drh', 'Directrice RH'),
     ('dp', 'Directeur Pays'),
     ('superieur', 'Supérieur hiérarchique'),
-    ('collaborateur', 'Collaborateur'),
-    ('rejete', 'Rejeté'),
-    ('annulee', 'Annulée par le collaborateur'),
+    ('collaborateur', 'Collaborateur'),    
 )
 # The `STATUT_ABSENCE` constant is a tuple of tuples that defines different status options for an
 # absence in the system. Each tuple consists of two elements: the key representing the status and the
@@ -28,6 +26,7 @@ STATUT_ABSENCE = (
     ('verifie_drh', 'Vérifié par DRH'),
     ('valide_dp', 'Validé par DP'),
     ('rejete', 'Rejeté'),
+    ('annulee', 'Annulée par le collaborateur'),
 )
 
 # -----------------------------
@@ -106,14 +105,35 @@ class QuotaAbsence(models.Model):
 # -----------------------------
 
 class ValidationHistorique(models.Model):
-    absence = models.ForeignKey('Absence', on_delete=models.CASCADE, related_name='validations')
-    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=50)
-    date_action = models.DateTimeField(auto_now_add=True)
-    commentaire = models.TextField(blank=True, null=True)
+    """
+    Ce modèle enregistre chaque action de validation, modification ou annulation
+    effectuée sur une demande d'absence. Il permet d’avoir un suivi complet.
+    """
+    absence = models.ForeignKey(
+        'Absence',
+        on_delete=models.CASCADE,
+        related_name='historiques',  # Permet d'accéder à absence.historiques
+    )
+    utilisateur = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True  # Garde l'historique même si l'utilisateur est supprimé
+    )
+    action = models.CharField(
+        max_length=255  # Exemple : "approuve_par_superieur", "modifiee_par_collaborateur"
+    )
+    date_action = models.DateTimeField(
+        auto_now_add=True  # Rempli automatiquement à la création
+    )
+    commentaire = models.TextField(
+        blank=True,
+        null=True  # Commentaire optionnel, ex : "Motif d'annulation"
+    )
 
     def __str__(self):
-        return f"{self.utilisateur} - {self.action} - {self.date_action}"
+        return f"{self.absence} - {self.action} par {self.utilisateur}"
+# -----------------------------
+
 
 # -----------------------------
 # Modèle : Absence
@@ -151,6 +171,21 @@ class Absence(models.Model):
 
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
+    
+    def dernier_motif_rejet(self):
+        dernier_rejet = self.historiques.filter(action__icontains='rejete').order_by('-date_action').first()
+        if dernier_rejet and dernier_rejet.commentaire:
+            return dernier_rejet.commentaire
+        return None
+
+    def date_rejet(self):
+        dernier_rejet = self.historiques.filter(action__icontains='rejete').order_by('-date_action').first()
+        if dernier_rejet:
+            return dernier_rejet.date_action
+        return None
+
+    def a_annulation(self):
+        return self.annulee_par_collaborateur and bool(self.motif_annulation)
 
     def __str__(self):
         return f"{self.collaborateur.get_full_name()} - {self.type_absence.nom} du {self.date_debut} ({self.nombre_jours} jours ouvrés)"
@@ -216,3 +251,14 @@ class Absence(models.Model):
                 pass
 
         super().save(*args, **kwargs)
+        
+        
+
+class Recuperation(models.Model):
+    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE)
+    motif = models.TextField()
+    justificatif = models.FileField(upload_to='justificatifs_recuperations/')
+    date_soumission = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Récupération - {self.utilisateur.get_full_name()} - {self.date_soumission.strftime('%d/%m/%Y')}"
