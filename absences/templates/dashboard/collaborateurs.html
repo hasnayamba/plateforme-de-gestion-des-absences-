@@ -15,6 +15,18 @@
       </a>
     </div>
 
+<div class="col-md-6 col-lg-3">
+  <a href="#" class="text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#modalRecuperation">
+    <div class="card shadow h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-arrow-repeat fs-1 text-info"></i>
+        <h5 class="card-title mt-3">Soumettre une récupération</h5>
+      </div>
+    </div>
+  </a>
+</div>
+
+
     <div class="col-md-6 col-lg-3">
       <a href="{% url 'mes_absences' %}" class="text-decoration-none text-dark">
         <div class="card shadow h-100">
@@ -37,16 +49,35 @@
       </a>
     </div>
 
-    <div class="col-md-6 col-lg-3">
-      <a href="{% url 'calendrier_absences' %}" class="text-decoration-none text-dark">
-        <div class="card shadow h-100">
-          <div class="card-body text-center">
-            <i class="bi bi-calendar3 fs-1 text-danger"></i>
-            <h5 class="card-title mt-3">Calendrier</h5>
-          </div>
+  
+  </div>
+</div>
+
+
+<!-- Modal de soumission de récupération -->
+<div class="modal fade" id="modalRecuperation" tabindex="-1" aria-labelledby="modalRecuperationLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" enctype="multipart/form-data" action="{% url 'soumettre_recuperation' %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalRecuperationLabel">Soumettre une récupération</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="motif" class="form-label">Motif</label>
+          <textarea name="motif" id="motif" class="form-control" rows="3" required></textarea>
         </div>
-      </a>
-    </div>
+        <div class="mb-3">
+          <label for="justificatif" class="form-label">Justificatif (PDF, image, etc.)</label>
+          <input type="file" name="justificatif" id="justificatif" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Soumettre</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+      </div>
+    </form>
   </div>
 </div>
 

@@ -53,8 +53,22 @@ urlpatterns = [
 # Partie Admin                  #
 # -----------------------------# 
     path('dashboard/admingestion', views.admin_users, name='admin_users'),
+    # path('admin_dashboard/', views.dashboard_admin, name='dashboard_admin'),
+    # path('admin_users/', views.admin_users, name='admin_users'),
+    # path('admin_users/ajouter/', views.admin_user_create, name='admin_user_create'),
+    # path('admin_users/<int:user_id>/modifier/', views.admin_user_edit, name='admin_user_edit'),
+    # path('admin_users/ajouter/', views.admin_user_create, name='admin_user_create'),
+    # path('admin_users/<int:user_id>/supprimer/', views.admin_user_delete, name='admin_user_delete'),
     path('configurations/', views.configuration_view, name='configuration_view'),  
+    # path('admin_quotas/', views.quotas_view, name='quotas_views'),        
+    # path('admin/absences/', views.admin_absences_view, name='admin_absences'),
+    # path('admin/types/', views.admin_types_view, name='admin_types'),     
+    # path('admin/feries/', views.admin_feries_view, name='admin_feries'),  
     path('configurations/supprimer-type-absence/<int:type_id>/', views.supprimer_type_absence, name='supprimer_type_absence'),
-    path('configurations/supprimer-jour-ferie/<int:jour_id>/', views.supprimer_jour_ferie, name='supprimer_jour_ferie'),        
+    path('configurations/supprimer-jour-ferie/<int:jour_id>/', views.supprimer_jour_ferie, name='supprimer_jour_ferie'),
 
+
+               
+               
+               
 ]

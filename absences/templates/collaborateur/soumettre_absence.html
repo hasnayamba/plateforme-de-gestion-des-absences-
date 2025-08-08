@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <!-- Carte du formulaire -->
             <div class="card shadow rounded-4 border-0">
                 <div class="card-header bg-success text-white rounded-top-4">
-                    <h4 class="mb-0">Demande d’absence</h4>
+                    <h4 class="mb-0">
+                        {% if absence %}Modifier une demande{% else %}Demande d’absence{% endif %}
+                    </h4>
                 </div>
                 <div class="card-body p-4">
                     <form method="post" enctype="multipart/form-data" novalidate>
@@ -20,7 +20,11 @@
                             <select name="type_absence" id="type_absence" class="form-select" required>
                                 <option value="">-- Sélectionnez un type --</option>
                                 {% for type in types_absence %}
-                                    <option value="{{ type.id }}">{{ type.nom }}</option>
+                                    <option value="{{ type.id }}"
+                                    {% if form_data.type_absence|stringformat:"s" == type.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                    >{{ type.nom }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -28,19 +32,22 @@
                         <!-- Date de début -->
                         <div class="mb-3">
                             <label for="date_debut" class="form-label">Date de début <span class="text-danger">*</span></label>
-                            <input type="date" name="date_debut" id="date_debut" class="form-control" required>
+                            <input type="date" name="date_debut" id="date_debut" class="form-control" required
+                                value="{{ form_data.date_debut|default:'' }}">
                         </div>
 
                         <!-- Nombre de jours -->
                         <div class="mb-3">
                             <label for="nombre_jours" class="form-label">Nombre de jours <span class="text-danger">*</span></label>
-                            <input type="number" name="nombre_jours" id="nombre_jours" class="form-control" min="1" required>
+                            <input type="number" step="0.5" name="nombre_jours" id="nombre_jours" class="form-control" min="0.5" required
+                                value="{{ form_data.nombre_jours|default:'' }}">
                         </div>
 
                         <!-- Raison -->
                         <div class="mb-3">
                             <label for="raison" class="form-label">Raison de l’absence</label>
-                            <textarea name="raison" id="raison" class="form-control" rows="3" placeholder="Expliquez brièvement la raison..."></textarea>
+                            <textarea name="raison" id="raison" class="form-control" rows="3"
+                                placeholder="Expliquez brièvement la raison...">{{ form_data.raison|default:'' }}</textarea>
                         </div>
 
                         <!-- Justificatif -->
@@ -52,14 +59,18 @@
                         <!-- Bouton de soumission -->
                         <div class="d-grid">
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-send me-1"></i> Soumettre la demande
+                                {% if absence %}
+                                    <i class="bi bi-pencil-square me-1"></i> Enregistrer les modifications
+                                {% else %}
+                                    <i class="bi bi-send me-1"></i> Soumettre la demande
+                                {% endif %}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Affichage des messages -->
+            <!-- Messages Django -->
             {% if messages %}
                 <div class="mt-4">
                     {% for message in messages %}
@@ -76,31 +87,28 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-    const dateInput = document.getElementById('date_debut');
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.setAttribute('min', today); // Bloque les jours passés
+        const dateInput = document.getElementById('date_debut');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
 
-    const joursFeries = {{ jours_feries|safe }}; // injecté par Django
+        const joursFeries = {{ jours_feries|safe }};
+        dateInput.addEventListener('input', function () {
+            const selectedDate = new Date(this.value);
+            const day = selectedDate.getDay();
+            const formattedDate = this.value;
 
-    dateInput.addEventListener('input', function () {
-        const selectedDate = new Date(this.value);
-        const day = selectedDate.getDay();
-        const formattedDate = this.value;
+            if (day === 0 || day === 6) {
+                alert("Les weekends ne sont pas autorisés.");
+                this.value = '';
+                return;
+            }
 
-        if (day === 0 || day === 6) {
-            alert("Les weekends ne sont pas autorisés.");
-            this.value = '';
-            return;
-        }
-
-        if (joursFeries.includes(formattedDate)) {
-            alert("Ce jour est un jour férié.");
-            this.value = '';
-            return;
-        }
+            if (joursFeries.includes(formattedDate)) {
+                alert("Ce jour est un jour férié.");
+                this.value = '';
+                return;
+            }
+        });
     });
-});
 </script>
-
-
 {% endblock %}

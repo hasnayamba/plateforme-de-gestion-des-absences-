@@ -27,45 +27,99 @@
 
        
         <!-- Bloc 3 : Jours fériés -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Jours fériés</strong>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalJourFerie">Ajouter</button>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group">
-                        {% for jf in jours_feries %}
-                        <li class="list-group-item">{{ jf.date }} - {{ jf.description }}</li>
-                        {% empty %}
-                        <li class="list-group-item">Aucun jour férié</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+        <!-- Bloc 3 : Jours fériés -->
+<div class="col-md-6 mb-4">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Jours fériés</strong>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalJourFerie">Ajouter</button>
         </div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for jf in jours_feries %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>{{ jf.date }} - {{ jf.description }}</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modifierJourFerieModal{{ jf.id }}">✏️</button>
+                        <a href="{% url 'supprimer_jour_ferie' jf.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Confirmer la suppression ?')">🗑️</a>
+                    </div>
+                </li>
+
+                <!-- Modal Modification Jour Férié -->
+                <div class="modal fade" id="modifierJourFerieModal{{ jf.id }}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <form method="post" class="modal-content">
+                      {% csrf_token %}
+                      <input type="hidden" name="modifier_jourferie_id" value="{{ jf.id }}">
+                      <div class="modal-header"><h5 class="modal-title">Modifier le jour férié</h5></div>
+                      <div class="modal-body">
+                        <input type="date" name="date" class="form-control mb-2" value="{{ jf.date }}" required>
+                        <input type="text" name="description" class="form-control" value="{{ jf.description }}" required>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" name="modifier_jourferie" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+                {% empty %}
+                <li class="list-group-item">Aucun jour férié</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
 
         <!-- Bloc 4 : Types d'absence -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>Types d'absence</strong>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalTypeAbsence">Ajouter</button>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group">
-                        {% for t in types_absence %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ t.nom }}
-                            <span class="badge" style="background-color: {{ t.couleur }};">&nbsp;&nbsp;&nbsp;</span>
-                        </li>
-                        {% empty %}
-                        <li class="list-group-item">Aucun type</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+<div class="col-md-6 mb-4">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Types d'absence</strong>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalTypeAbsence">Ajouter</button>
         </div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for t in types_absence %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        {{ t.nom }}
+                        <span class="badge" style="background-color: {{ t.couleur }};">&nbsp;&nbsp;&nbsp;</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modifierTypeAbsenceModal{{ t.id }}">✏️</button>
+                        <a href="{% url 'supprimer_type_absence' t.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Confirmer la suppression ?')">🗑️</a>
+                    </div>
+                </li>
+
+                <!-- Modal Modification Type -->
+                <div class="modal fade" id="modifierTypeAbsenceModal{{ t.id }}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <form method="post" class="modal-content">
+                      {% csrf_token %}
+                      <input type="hidden" name="modifier_typeabsence_id" value="{{ t.id }}">
+                      <div class="modal-header"><h5 class="modal-title">Modifier le type d'absence</h5></div>
+                      <div class="modal-body">
+                        <input type="text" name="nom" class="form-control mb-2" value="{{ t.nom }}" required>
+                        <input type="color" name="couleur" class="form-control form-control-color" value="{{ t.couleur }}" required>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" name="modifier_typeabsence" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+                {% empty %}
+                <li class="list-group-item">Aucun type</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+
     </div>
 </div>
 

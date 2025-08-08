@@ -1,43 +1,144 @@
 {% extends 'base.html' %}
-{% load static %}
-{% block title %}Tableau de bord - Supérieur hiérarchique{% endblock %}
-
 {% block content %}
-<h2>Demandes d'absence à approuver</h2>
-<p>Bienvenue {{ user.first_name }}, voici les demandes de vos collaborateurs.</p>
+<div class="container mt-4">
+  <ul class="nav nav-tabs">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#attente">À valider</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#validees">Approuvées</a>
+    </li>
+  </ul>
 
-{% if absences %}
-<table class="table table-bordered table-hover">
-    <thead class="thead-dark">
-        <tr>
+  <div class="tab-content mt-3">
+    <!-- Absences à valider -->
+    <div class="tab-pane fade show active" id="attente">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
             <th>Collaborateur</th>
-            <th>Type d'absence</th>
-             <th>Raison</th>
-            <th>Début</th>
-            <th>Fin</th>
+            <th>Type</th>
+            <th>Du</th>
+            <th>Au</th>
+            <th>Justificatif</th>
             <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for absence in absences %}
-        <tr>
+          </tr>
+        </thead>
+        <tbody>
+          {% for absence in absences %}
+          <tr>
             <td>{{ absence.collaborateur.get_full_name }}</td>
             <td>{{ absence.type_absence.nom }}</td>
-            <td>{{ absence.raison }}</td>
             <td>{{ absence.date_debut }}</td>
             <td>{{ absence.date_fin }}</td>
             <td>
-                <form action="{% url 'approuver_absence' absence.id %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success">Approuver</button>
-                </form>
-                <!-- Tu pourras ajouter un bouton "Refuser" ici plus tard -->
+              {% if absence.justificatif %}
+              <a href="{{ absence.justificatif.url }}" target="_blank">Voir</a>
+              {% else %}
+              Aucun
+              {% endif %}
             </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="alert alert-info">Aucune demande d'absence en attente.</div>
-{% endif %}
+            <td>
+              <!-- Valider -->
+              <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="absence_id" value="{{ absence.id }}">
+                <button name="decision" value="valider" class="btn btn-success btn-sm">Valider</button>
+              </form>
+
+              <!-- Rejeter -->
+              <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejet{{ absence.id }}">Rejeter</button>
+
+              <!-- Historique -->
+              <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalHistorique{{ absence.id }}">Historique</button>
+
+              <!-- Modal Rejet -->
+              <div class="modal fade" id="modalRejet{{ absence.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="absence_id" value="{{ absence.id }}">
+                      <input type="hidden" name="decision" value="rejeter">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Motif du rejet</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <textarea name="motif" class="form-control" required></textarea>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">Confirmer</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Historique -->
+              <div class="modal fade" id="modalHistorique{{ absence.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Historique de l'absence</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <ul>
+                        {% for h in absence.historiques.all %}
+                        <li>
+                          {{ h.date_validation|date:"d/m/Y H:i" }} — {{ h.role_valide }} :
+                          {{ h.decision|title }}{% if h.motif %} (Motif : {{ h.motif }}){% endif %}
+                        </li>
+                        {% empty %}
+                        <li>Aucun historique</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    <div class="modal-footer">
+                      <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center">Aucune absence à valider.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Absences approuvées -->
+    <div class="tab-pane fade" id="validees">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Collaborateur</th>
+            <th>Type</th>
+            <th>Du</th>
+            <th>Au</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for absence in absences_approuvees %}
+          <tr>
+            <td>{{ absence.collaborateur.get_full_name }}</td>
+            <td>{{ absence.type_absence.nom }}</td>
+            <td>{{ absence.date_debut }}</td>
+            <td>{{ absence.date_fin }}</td>
+            <td>{{ absence.get_statut_display }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center">Aucune absence validée.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,40 +1,211 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block title %}Gestion des utilisateurs{% endblock %}
+
 {% block content %}
-<h3 class="mb-4">👥 Gestion des utilisateurs</h3>
+<div class="container mt-4">
+  <h2 class="mb-4">Gestion des utilisateurs</h2>
 
-<a href="{% url 'admin_user_create' %}" class="btn btn-success mb-3">➕ Ajouter un utilisateur</a>
+  <!-- Boutons d'action -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'configuration_view' %}" class="btn btn-outline-secondary">
+      ⚙️ Configurer l'application
+    </a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+      ➕ Ajouter un utilisateur
+    </button>
+  </div>
 
-<table class="table table-bordered table-hover">
-    <thead class="table-dark">
+  <!-- Tableau des utilisateurs -->
+  <div class="table-responsive rounded shadow-sm">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-dark">
         <tr>
-            <th>Nom complet</th>
-            <th>Email</th>
-            <th>Rôle</th>
-            <th>Supérieur</th>
-            <th>Statut</th>
-            <th>Actions</th>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Actif</th>
+          <th class="text-center">Actions</th>
         </tr>
-    </thead>
-    <tbody>
-        {% for user in utilisateurs %}
+      </thead>
+      <tbody>
+        {% for u in utilisateurs %}
         <tr>
-            <td>{{ user.get_full_name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.profile.get_role_display }}</td>
-            <td>{{ user.profile.superieur.get_full_name|default:"—" }}</td>
-            <td>
-                {% if user.profile.actif %}
-                ✅ Actif
-                {% else %}
-                ❌ Inactif
-                {% endif %}
-            </td>
-            <td>
-                <a href="{% url 'admin_user_edit' user.id %}" class="btn btn-primary btn-sm">✏️ Modifier</a>
-                <!-- Supprimer si souhaité -->
-            </td>
+          <td>{{ u.last_name }}</td>
+          <td>{{ u.first_name }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.profile.get_role_display }}</td>
+          <td>{{ u.profile.actif|yesno:"Oui,Non" }}</td>
+          <td class="text-center">
+
+            <!-- Info -->
+            <button class="btn btn-sm btn-outline-info me-1 btn-info"
+              data-user='{
+                "id": "{{ u.id }}",
+                "nom": "{{ u.last_name }}",
+                "prenom": "{{ u.first_name }}",
+                "email": "{{ u.email }}",
+                "username": "{{ u.username }}",
+                "poste": "{{ u.profile.poste }}",
+                "role": "{{ u.profile.get_role_display }}",
+                "actif": "{{ u.profile.actif|yesno:"Oui,Non" }}",
+                "superieur": "{{ u.profile.superieur.get_full_name|default:"Aucun" }}"
+              }'
+              data-bs-toggle="modal" data-bs-target="#userInfoModal"
+              title="Infos utilisateur">
+              ℹ️
+            </button>
+
+            <!-- Modifier -->
+            <button class="btn btn-sm btn-outline-warning me-1 btn-edit"
+              data-user='{
+                "id": "{{ u.id }}",
+                "nom": "{{ u.last_name }}",
+                "prenom": "{{ u.first_name }}",
+                "email": "{{ u.email }}",
+                "username": "{{ u.username }}",
+                "role": "{{ u.profile.role }}",
+                "superieur": "{{ u.profile.superieur.id|default:'' }}",
+                "actif": "{{ u.profile.actif }}"
+              }'
+              data-bs-toggle="modal" data-bs-target="#editUserModal"
+              title="Modifier">
+              ✏️
+            </button>
+
+            <!-- Supprimer -->
+            <button class="btn btn-sm btn-outline-danger" 
+              onclick="openDeleteModal({{ u.id }}, '{{ u.get_full_name }}')"
+              title="Supprimer">
+              🗑️
+            </button>
+          </td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modales -->
+<!-- ✅ Modal Ajouter Utilisateur -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" class="modal-content rounded-3 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">➕ Ajouter un utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body row g-3">
+        {% include 'admin/user_form_fields.html' with is_edit=False %}
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ✏️ Modal Modifier Utilisateur -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST" class="modal-content rounded-3 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="edit">
+      <input type="hidden" name="user_id" id="edit_user_id">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">✏️ Modifier l’utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body row g-3">
+        {% include 'admin/user_form_fields.html' with is_edit=True %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 🗑️ Modal Supprimer Utilisateur -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" class="modal-content rounded-3 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="user_id" id="delete_user_id">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger fw-bold">🗑️ Supprimer un utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Êtes-vous sûr de vouloir supprimer <strong id="delete_user_name"></strong> ?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ℹ️ Modal Infos Utilisateur -->
+<div class="modal fade" id="userInfoModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow-sm">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">ℹ️ Informations de l'utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><strong>Nom :</strong> <span id="info_nom"></span></li>
+          <li class="list-group-item"><strong>Prénom :</strong> <span id="info_prenom"></span></li>
+          <li class="list-group-item"><strong>Email :</strong> <span id="info_email"></span></li>
+          <li class="list-group-item"><strong>Nom d'utilisateur :</strong> <span id="info_username"></span></li>
+          <li class="list-group-item"><strong>Poste :</strong> <span id="info_poste"></span></li>
+          <li class="list-group-item"><strong>Rôle :</strong> <span id="info_role"></span></li>
+          <li class="list-group-item"><strong>Statut :</strong> <span id="info_actif"></span></li>
+          <li class="list-group-item"><strong>Supérieur hiérarchique :</strong> <span id="info_superieur"></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- JS pour les modales -->
+<script>
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const user = JSON.parse(btn.getAttribute('data-user'));
+      document.getElementById('edit_user_id').value = user.id;
+      document.getElementById('edit_nom').value = user.nom;
+      document.getElementById('edit_prenom').value = user.prenom;
+      document.getElementById('edit_email').value = user.email;
+      document.getElementById('edit_username').value = user.username;
+      document.getElementById('edit_role').value = user.role;
+      document.getElementById('edit_superieur').value = user.superieur;
+      document.getElementById('edit_actif').checked = user.actif === "True";
+    });
+  });
+
+  function openDeleteModal(id, name) {
+    document.getElementById('delete_user_id').value = id;
+    document.getElementById('delete_user_name').textContent = name;
+    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+  }
+
+  document.querySelectorAll('.btn-info').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const user = JSON.parse(btn.getAttribute('data-user'));
+      document.getElementById('info_nom').textContent = user.nom;
+      document.getElementById('info_prenom').textContent = user.prenom;
+      document.getElementById('info_email').textContent = user.email;
+      document.getElementById('info_username').textContent = user.username;
+      document.getElementById('info_poste').textContent = user.poste || 'Non précisé';
+      document.getElementById('info_role').textContent = user.role;
+      document.getElementById('info_actif').textContent = user.actif;
+      document.getElementById('info_superieur').textContent = user.superieur;
+    });
+  });
+</script>
 {% endblock %}
