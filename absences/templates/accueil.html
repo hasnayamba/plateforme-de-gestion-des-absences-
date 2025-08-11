@@ -6,39 +6,43 @@
 <div class="container mt-4">
   <h2 class="mb-4">Absences validées par collaborateur et par mois</h2>
 
-  <table class="table table-bordered table-sm align-middle text-center">
-    <thead class="table-light">
-      <tr>
-        <th>Collaborateur</th>
-        {% for nom in mois_noms %}
-          <th>{{ nom }}</th>
+  {% if lignes %}
+    <table class="table table-bordered table-sm align-middle text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Collaborateur</th>
+          {% for nom in mois_noms %}
+            <th>{{ nom }}</th>
+          {% endfor %}
+          <th>Total (jours)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+        <tr>
+          <td class="text-start">{{ ligne.user.get_full_name }}</td>
+          {% for mois_absences in ligne.mois %}
+            <td>
+              {% if mois_absences %}
+                <ul class="list-unstyled mb-0">
+                  {% for absence in mois_absences %}
+                    <li>
+                      {{ absence.type_absence.nom }} ({{ absence.duree|floatformat:1 }}j)
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td><strong>{{ ligne.total|floatformat:1 }}</strong></td>
+        </tr>
         {% endfor %}
-        <th>Total (jours)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for ligne in lignes %}
-      <tr>
-        <td class="text-start">{{ ligne.user.get_full_name }}</td>
-        {% for mois_absences in ligne.mois %}
-          <td>
-            {% if mois_absences %}
-              <ul class="list-unstyled mb-0">
-                {% for absence in mois_absences %}
-                  <li>
-                    {{ absence.type_absence.nom }} ({{ absence.duree|floatformat:1 }}j)
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              —
-            {% endif %}
-          </td>
-        {% endfor %}
-        <td><strong>{{ ligne.total|floatformat:1 }}</strong></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">Aucune absence validée trouvée.</p>
+  {% endif %}
 </div>
 {% endblock %}
