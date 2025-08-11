@@ -44,8 +44,8 @@
                                         {% for absence in absences_mois %}
                                             <div class="mb-1">
                                                 <span class="badge"
-                                                    style="background-color: {{ absence.type_absence.couleur }};">
-                                                    {{ absence.type_absence.nom|slice:":2"|upper }}
+                                                    style="background-color: {{ absence.type_absence.couleur }}; fontzize: 0.9em;">
+                                                    {{ absence.type_absence.nom|slice:":10"|upper }}
                                                 </span><br>
                                                 <small>{{ absence.date_debut|date:"M d" }} → {{ absence.date_fin|date:"M d" }}</small>
                                             </div>
