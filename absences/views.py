@@ -31,12 +31,20 @@ import csv
 # -----------------------------
 # Accueil 
 # -----------------------------
+from django.db.models import Q
+from calendar import month_name
+from django.contrib.auth.models import User
+from .models import Absence
+
 def accueil_public(request):
     # Génère les noms des mois en français
     mois_noms = [month_name[i].capitalize() for i in range(1, 13)]
 
-    # Récupère tous les utilisateurs actifs avec des absences validées
-    utilisateurs = User.objects.filter(profile__actif=True).order_by('last_name')
+    # Récupère uniquement les utilisateurs ayant au moins un congé validé
+    utilisateurs = User.objects.filter(
+        profile__actif=True,
+        absence__statut='valide_dp'  # jointure avec le modèle Absence
+    ).distinct().order_by('last_name')
 
     lignes = []
     for user in utilisateurs:
@@ -65,6 +73,7 @@ def accueil_public(request):
         'mois_noms': mois_noms,
         'lignes': lignes
     })
+
 # -----------------------------
 # Login Avec des profiles
 # -----------------------------
