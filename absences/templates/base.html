@@ -71,7 +71,10 @@
             <div class="collapse navbar-collapse" id="navbarMain">
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item me-3 text-white">
-                        👋 Bonjour, {{ request.user.first_name }} {{ request.user.last_name }}
+                        <i class="bi bi-person-circle">
+                            {{ request.user.first_name }} {{ request.user.last_name }}
+                        </i> 
+                        
                     </li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_collaborateur' %}">Accueil</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'soumettre_absence' %}">Soumettre une absence</a></li>
