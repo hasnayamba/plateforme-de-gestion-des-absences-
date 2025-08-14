@@ -295,11 +295,11 @@ def soumettre_absence(request, absence_id=None):
             absence.raison = raison
             if justificatif:
                 absence.justificatif = justificatif
-            absence.statut = 'en_attente'
-            absence.approuve_par_superieur = False
-            absence.verifie_par_drh = False
-            absence.valide_par_dp = False
-            absence.save()
+                absence.statut = 'en_attente'
+                absence.approuve_par_superieur = False
+                absence.verifie_par_drh = False
+                absence.valide_par_dp = False
+                absence.save()
 
             ValidationHistorique.objects.create(
                 absence=absence,
