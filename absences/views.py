@@ -132,7 +132,7 @@ def changer_mot_de_passe(request):
 # -----------------------------
 def logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('accueil_public')
 
 # -----------------------------
 # Dashboard pour les supérieurs
