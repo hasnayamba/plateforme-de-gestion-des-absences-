@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from datetime import timedelta
 from .utils import est_jour_ouvre, compter_jours_ouvres
+from django.core.validators import MinValueValidator
 
 # -----------------------------
 # Constantes globales
@@ -92,7 +93,12 @@ class QuotaAbsence(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quotas')
     type_absence = models.ForeignKey(TypeAbsence, on_delete=models.CASCADE)
     annee = models.IntegerField()
-    jours_disponibles = models.FloatField(default=0)
+    jours_disponibles = models.DecimalField(
+    max_digits=5,      # ex: 999.99 max
+    decimal_places=2,  # nombre de décimales
+    default=Decimal("0.00"),
+    validators=[MinValueValidator(Decimal("0.00"))]
+)
 
     class Meta:
         unique_together = ('user', 'type_absence', 'annee')
