@@ -92,7 +92,7 @@ class QuotaAbsence(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quotas')
     type_absence = models.ForeignKey(TypeAbsence, on_delete=models.CASCADE)
     annee = models.IntegerField()
-    jours_disponibles = models.PositiveIntegerField(default=0)
+    jours_disponibles = models.FloatField(default=0)
 
     class Meta:
         unique_together = ('user', 'type_absence', 'annee')
