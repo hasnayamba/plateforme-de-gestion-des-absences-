@@ -867,7 +867,11 @@ def admin_users(request):
                 messages.success(request, "Utilisateur modifié avec succès.")
 
             for i, type_absence in enumerate(types_absences):
-                jours = quotas[i].replace(',','.')
+                # conversion sécurisée
+                try:
+                    jours = float(quotas[i].replace(',', '.'))
+                except (ValueError, IndexError):
+                    jours = 0.0  
                 quota, created = QuotaAbsence.objects.get_or_create(
                     user=user,
                     type_absence=type_absence,

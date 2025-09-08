@@ -13,7 +13,7 @@ if not SECRET_KEY:
     
 
 # --- Mode DEBUG ---
-DEBUG = False  # ⚠️ Passe à False en production et utilise ALLOWED_HOSTS
+DEBUG = True  # ⚠️ Passe à False en production et utilise ALLOWED_HOSTS
 
 ALLOWED_HOSTS = ["gestionabsences.azurewebsites.net", "127.0.0.1", "localhost"]
 
