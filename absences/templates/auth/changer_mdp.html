@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-5">
+     {% csrf_token %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger">{{ message }}</div>
+                {% endfor %}
+    {% endif %}
     <h3>🔐 Changer votre mot de passe</h3>
     <form method="POST">
         {% csrf_token %}
