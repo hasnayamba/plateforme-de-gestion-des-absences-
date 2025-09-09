@@ -291,7 +291,22 @@
             <td>{{ r.utilisateur.get_full_name }}</td>
             <td>{{ r.date_soumission|date:"d/m/Y H:i" }}</td>
             <td>{{ r.motif }}</td>
-            <td><a href="{{ r.justificatif.url }}" target="_blank">Voir</a></td>
+
+            <td>
+              <td>
+                {% if r.justificatif %}
+                  <!-- Lien pour ouvrir -->
+                  <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-sm btn-primary">
+                    <i class="bi bi-eye"></i> Voir
+                  </a>
+                  <!-- Lien pour télécharger -->
+                  <a href="{{ r.justificatif.url }}" download class="btn btn-sm btn-success">
+                    <i class="bi bi-download"></i> Télécharger
+                  </a>
+                {% else %}
+                  <span class="text-muted">Aucun fichier</span>
+                {% endif %}
+              </td>
           </tr>
           {% empty %}
           <tr><td colspan="4">Aucune récupération soumise.</td></tr>

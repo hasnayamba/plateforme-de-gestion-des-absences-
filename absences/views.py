@@ -352,7 +352,7 @@ def soumettre_recuperation(request):
             messages.success(request, "Votre demande de récupération a été transmise à la RH.")
         else:
             messages.error(request, "Veuillez remplir tous les champs.")
-    return redirect('dashboard/collaborateurs')  # change si le nom est différent
+    return redirect('dashboard_collaborateur')  # change si le nom est différent
   
     
 # -----------------------------

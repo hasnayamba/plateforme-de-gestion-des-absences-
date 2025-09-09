@@ -26,7 +26,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',
-    'absences',  # Ton app principale
+    'absences',
+    'storages'
 ]
 
 MIDDLEWARE = [
@@ -107,7 +108,11 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')                          # URL pour accéder aux fichiers
+
+# En production sur Azure App Service
+if os.environ.get('WEBSITE_SITE_NAME'):  # Vérifie si on est sur Azure
+    MEDIA_ROOT = r'D:\home\site\wwwroot\media'
 
 # --- Authentification / Redirection ---
 LOGIN_URL = 'login'
