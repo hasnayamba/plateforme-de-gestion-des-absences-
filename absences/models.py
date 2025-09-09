@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from datetime import timedelta
 from .utils import est_jour_ouvre, compter_jours_ouvres
 from django.core.validators import MinValueValidator
+from decimal import Decimal
 
 # -----------------------------
 # Constantes globales
