@@ -328,39 +328,6 @@
   </div> <!-- end .tab-content -->
 </div> <!-- end .container -->
 {% endblock %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const quotaModal = document.getElementById("quotaModal");
-  const form = document.getElementById("quotaForm");
-
-  quotaModal.addEventListener("show.bs.modal", function (event) {
-    const button = event.relatedTarget; // le bouton cliqué
-    if (!button) return;
-
-    const id = button.getAttribute("data-id");
-    const user = button.getAttribute("data-user");
-    const type = button.getAttribute("data-type");
-    const jours = button.getAttribute("data-jours");
-    const url = button.getAttribute("data-url");
-
-    // Remplir la modal
-    quotaModal.querySelector("#quotaTitle").textContent = "Mise à jour quota - " + user;
-    quotaModal.querySelector("#quotaId").value = id;
-    quotaModal.querySelector("#quotaUser").value = user;
-    quotaModal.querySelector("#quotaType").value = type;
-    quotaModal.querySelector("#quotaJours").value = jours;
-    quotaModal.querySelector("#quotaCurrent").textContent = jours;
-
-    if (url) form.action = url;
-  });
-
-  quotaModal.addEventListener("hidden.bs.modal", function () {
-    form.reset();
-    quotaModal.querySelector("#quotaCurrent").textContent = '';
-  });
-});
-</script>
-
 
 <style>
   /* Styles pour les badges de statut */
