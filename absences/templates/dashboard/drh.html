@@ -91,63 +91,69 @@
               </form>
             </div>
           </div>
-
-              <!-- Modal Améliorer -->
-          <div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
-            <div class="modal-dialog">
-              <form method="post" action="{% url 'modifier_absence' absence.id %}">{% csrf_token %}
-                <div class="modal-content">
-                  <div class="modal-header"><h5 class="modal-title">Motif Rejet</h5></div>
-                  <div class="modal-body">
-                    <label>Message :</label>
-                    <textarea name="commentaire" class="form-control" required></textarea>
-                  </div>
-                  <div class="modal-footer">
-                      <a href="{% url 'rejeter_absence_drh' absence.id %}" class="btn btn-sm btn-danger">Rejeter</a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                  </div>
+              <!-- Modal Rejet -->
+        <div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
+          <div class="modal-dialog">
+            <form method="post" action="{% url 'rejeter_absence_drh' absence.id %}">
+              {% csrf_token %}
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Motif de rejet</h5>
                 </div>
-              </form>
-            </div>
+                <div class="modal-body">
+                  <label>Message :</label>
+                  <textarea name="commentaire" class="form-control" required></textarea>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-danger">Rejeter</button>
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+              </div>
+            </form>
           </div>
+        </div>
+
 
           {% endfor %}
         </tbody>
       </table>
     </div>
-<!-- Tableau des quotas -->
+<!-- Tableau Quotas -->
 <div class="tab-pane fade" id="quotas">
   <h5>Quotas des collaborateurs</h5>
-  <table class="table table-bordered table-sm align-middle">
+  <table class="table table-bordered table-sm align-middle table-hover">
     <thead class="table-light">
       <tr>
         <th>Collaborateur</th>
-        <th>Type d’absence</th>
-        <th>Année</th>
-        <th>Jours disponibles</th>
-        <th>Action</th>
+        {% for type in types %}
+          <th>{{ type.nom }}</th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
-      {% for quota in quotas %}
+      {% for user, quotas_dict in collaborateurs.items %}
       <tr>
-        <td>{{ quota.user.get_full_name }}</td>
-        <td>{{ quota.type_absence.nom }}</td>
-        <td>{{ quota.annee }}</td>
-        <td>{{ quota.jours_disponibles }}</td>
-        <td>
-          <button 
-            class="btn btn-sm btn-outline-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#quotaModal"
-            data-id="{{ quota.id }}"
-            data-user="{{ quota.user.get_full_name }}"
-            data-type="{{ quota.type_absence.nom }}"
-            data-jours="{{ quota.jours_disponibles }}"
-          >
-            Modifier
-          </button>
-        </td>
+        <td>{{ user.get_full_name }}</td>
+        {% for type in types %}
+          {% if quotas_dict[type.id] %}
+            <td>
+              {{ quotas_dict[type.id].jours_disponibles }}
+              <button 
+                class="btn btn-sm btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#quotaModal"
+                data-id="{{ quotas_dict[type.id].id }}"
+                data-user="{{ user.get_full_name }}"
+                data-type="{{ type.nom }}"
+                data-jours="{{ quotas_dict[type.id].jours_disponibles }}"
+                data-url="{% url 'mettre_a_jour_quota' quotas_dict[type.id].id %}">
+                Modifier
+              </button>
+            </td>
+          {% else %}
+            <td class="text-muted">-</td>
+          {% endif %}
+        {% endfor %}
       </tr>
       {% endfor %}
     </tbody>
@@ -171,6 +177,7 @@
           <div class="mb-2">
             <label>Nombre de jours :</label>
             <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
+            <small class="text-muted">Actuel : <span id="quotaCurrent"></span></small>
           </div>
           <div class="mb-2">
             <label>Action :</label>
@@ -188,25 +195,30 @@
     </form>
   </div>
 </div>
-
 <script>
-  const quotaModal = document.getElementById('quotaModal')
-  quotaModal.addEventListener('show.bs.modal', event => {
-    const button = event.relatedTarget
-    const id = button.getAttribute('data-id')
-    const user = button.getAttribute('data-user')
-    const type = button.getAttribute('data-type')
-    const jours = button.getAttribute('data-jours')
+  document.addEventListener("DOMContentLoaded", function () {
+  const quotaModal = document.getElementById("quotaModal");
+  const form = document.getElementById("quotaForm");
 
-    // Remplir les champs du modal
-    quotaModal.querySelector('#quotaTitle').textContent = "Mise à jour quota - " + user
-    quotaModal.querySelector('#quotaId').value = id
-    quotaModal.querySelector('#quotaType').value = type
-    quotaModal.querySelector('#quotaJours').value = jours
+  quotaModal.addEventListener("show.bs.modal", function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute("data-id");
+    const user = button.getAttribute("data-user");
+    const type = button.getAttribute("data-type");
+    const jours = button.getAttribute("data-jours");
+    const url = button.getAttribute("data-url");
 
-    // Mettre à jour l'action du formulaire
-    document.getElementById('quotaForm').action = `/mettre_a_jour_quota/${id}/`
-  })
+    // Remplir les champs
+    quotaModal.querySelector("#quotaTitle").textContent = "Mise à jour quota - " + user;
+    quotaModal.querySelector("#quotaId").value = id;
+    quotaModal.querySelector("#quotaType").value = type;
+    quotaModal.querySelector("#quotaJours").value = jours;
+    quotaModal.querySelector("#quotaCurrent").textContent = jours;
+
+    // Action dynamique
+    form.action = url;
+  });
+});
 </script>
 
     <!-- TAB : Historique des validations -->

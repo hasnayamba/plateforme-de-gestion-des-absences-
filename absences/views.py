@@ -561,7 +561,7 @@ def rejeter_absence(request, absence_id):
 # -----------------------------
 @login_required
 def dashboard_drh(request):
-    # --- Filtres
+    # --- Filtres absences
     filters = {}
     if mois := request.GET.get('mois'):
         filters['date_debut__month'] = int(mois)
@@ -572,13 +572,23 @@ def dashboard_drh(request):
 
     absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
 
+    # --- Préparer un tableau croisé des quotas
+    quotas = QuotaAbsence.objects.select_related('user', 'type_absence')
+    types = list(TypeAbsence.objects.all())
+    collaborateurs = {}
+    for quota in quotas:
+        user = quota.user
+        if user not in collaborateurs:
+            collaborateurs[user] = {t.id: None for t in types}  # init avec None
+        collaborateurs[user][quota.type_absence.id] = quota
+
     context = {
         'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
         'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
         'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
-        'quotas': QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name'),
-        'types': TypeAbsence.objects.all(),
+        'types': types,
+        'collaborateurs': collaborateurs,  # clé = user, valeur = dict quotas
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
@@ -586,6 +596,7 @@ def dashboard_drh(request):
         'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
     return render(request, 'dashboard/drh.html', context)
+
 
 # -----------------------------
 # verifier et rejeter les absences par la DRH
