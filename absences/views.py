@@ -536,18 +536,24 @@ def approuver_absence(request, absence_id):
 # rejet absence
 # -----------------------------
 @login_required
-def rejeter_absence(request, absence_id):
+def rejeter_absence_drh(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
-    absence.statut = 'rejete'
-    absence.save()
 
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        action='rejete',
-        commentaire="Rejeté par le supérieur"
-    )
-    return redirect('dashboard_superieur')
+    if request.method == "POST":
+        motif = request.POST.get("motif", "Rejeté par la DRH")
+        absence.statut = "rejete"
+        absence.save()
+
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            action="rejete",
+            commentaire=motif
+        )
+        messages.success(request, "L’absence a bien été rejetée.")
+        return redirect("dashboard_drh")
+
+    return render(request, "dashboard/drh.html", {"absence": absence})
 
 
 # -----------------------------
@@ -556,42 +562,28 @@ def rejeter_absence(request, absence_id):
 @login_required
 def dashboard_drh(request):
     # --- Filtres
-    mois = request.GET.get('mois')
-    type_id = request.GET.get('type')
-    statut = request.GET.get('statut')
+    filters = {}
+    if mois := request.GET.get('mois'):
+        filters['date_debut__month'] = int(mois)
+    if type_id := request.GET.get('type'):
+        filters['type_absence_id'] = type_id
+    if statut := request.GET.get('statut'):
+        filters['statut'] = statut
 
-    absences = Absence.objects.select_related('collaborateur', 'type_absence')
-
-    if mois:
-        absences = absences.filter(date_debut__month=int(mois))
-    if type_id:
-        absences = absences.filter(type_absence_id=type_id)
-    if statut:
-        absences = absences.filter(statut=statut)
-
-    # --- Groupes utiles
-    absences_a_verifier = Absence.objects.filter(statut='en_attente')
-    absences_validees = Absence.objects.filter(statut='valide_dp')
-    historiques = ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action')
-    quotas = QuotaAbsence.objects.select_related('user', 'type_absence').all()
-    types = TypeAbsence.objects.all()
-    mois_list = [(i, month_name[i]) for i in range(1, 13)]
-
-    # --- Récupérations soumises par les collaborateurs
-    recuperations = Recuperation.objects.select_related('utilisateur').order_by('-date_soumission')
+    absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
 
     context = {
-        'absences_a_verifier': absences_a_verifier,
+        'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
+        'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
-        'absences_validees': absences_validees,
-        'types': types,
-        'quotas': quotas,
-        'historiques': historiques,
-        'mois_list': mois_list,
+        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
+        'quotas': QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name'),
+        'types': TypeAbsence.objects.all(),
+        'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
         'statut_selectionne': statut,
-        'recuperations': recuperations,
+        'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
     return render(request, 'dashboard/drh.html', context)
 

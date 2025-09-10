@@ -151,7 +151,10 @@ class Absence(models.Model):
     type_absence = models.ForeignKey(TypeAbsence, on_delete=models.CASCADE)
     date_debut = models.DateField()
     date_fin = models.DateField(blank=True, null=True)
-    nombre_jours = models.PositiveIntegerField(help_text="Nombre total de jours ouvrés demandés")
+    nombre_jours = models.DecimalField(
+        max_digits=5, decimal_places=1,
+        help_text="Nombre total de jours ouvrés demandés (peut inclure des demi-journées)"
+    )
     raison = models.TextField(blank=True, null=True)
 
     approuve_par_superieur = models.BooleanField(default=False)

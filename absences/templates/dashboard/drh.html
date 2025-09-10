@@ -115,69 +115,100 @@
         </tbody>
       </table>
     </div>
-    <!-- TAB : Quotas -->
-    <div class="tab-pane fade" id="quotas">
-      <h5>Quotas des collaborateurs</h5>
-      <table class="table table-bordered table-sm">
-        <thead class="table-light">
-          <tr>
-            <th>Collaborateur</th>
-            <th>Type d’absence</th>
-            <th>Année</th>
-            <th>Jours disponibles</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for quota in quotas %}
-          <tr>
-            <td>{{ quota.user.get_full_name }}</td>
-            <td>{{ quota.type_absence.nom }}</td>
-            <td>{{ quota.annee }}</td>
-            <td>{{ quota.jours_disponibles }}</td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalQuota{{ quota.id }}">Modifier</button>
-            </td>
-          </tr>
+<!-- Tableau des quotas -->
+<div class="tab-pane fade" id="quotas">
+  <h5>Quotas des collaborateurs</h5>
+  <table class="table table-bordered table-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Collaborateur</th>
+        <th>Type d’absence</th>
+        <th>Année</th>
+        <th>Jours disponibles</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for quota in quotas %}
+      <tr>
+        <td>{{ quota.user.get_full_name }}</td>
+        <td>{{ quota.type_absence.nom }}</td>
+        <td>{{ quota.annee }}</td>
+        <td>{{ quota.jours_disponibles }}</td>
+        <td>
+          <button 
+            class="btn btn-sm btn-outline-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#quotaModal"
+            data-id="{{ quota.id }}"
+            data-user="{{ quota.user.get_full_name }}"
+            data-type="{{ quota.type_absence.nom }}"
+            data-jours="{{ quota.jours_disponibles }}"
+          >
+            Modifier
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-          <!-- Modal Mise à jour Quota -->
-          <div class="modal fade" id="modalQuota{{ quota.id }}" tabindex="-1">
-            <div class="modal-dialog">
-              <form method="post" action="{% url 'mettre_a_jour_quota' quota.id %}">{% csrf_token %}
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">Mise à jour quota - {{ quota.user.get_full_name }}</h5>
-                  </div>
-                  <div class="modal-body">
-                    <div class="mb-2">
-                      <label>Type d’absence :</label>
-                      <input type="text" class="form-control" value="{{ quota.type_absence.nom }}" readonly>
-                    </div>
-                    <div class="mb-2">
-                      <label>Nombre de jours :</label>
-                      <input type="number" step="0.1" min="0" name="jours" class="form-control" required>
-                      
-                    </div>
-                    <div class="mb-2">
-                      <label>Action :</label>
-                      <select name="operation" class="form-select" required>
-                        <option value="ajouter">Ajouter</option>
-                        <option value="reduire">Réduire</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                  </div>
-                </div>
-              </form>
-            </div>
+<!-- Modal réutilisable -->
+<div class="modal fade" id="quotaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" id="quotaForm">{% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="quotaTitle">Mise à jour quota</h5>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="quotaId" name="quota_id">
+          <div class="mb-2">
+            <label>Type d’absence :</label>
+            <input type="text" id="quotaType" class="form-control" readonly>
           </div>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+          <div class="mb-2">
+            <label>Nombre de jours :</label>
+            <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label>Action :</label>
+            <select name="operation" class="form-select" required>
+              <option value="ajouter">Ajouter</option>
+              <option value="reduire">Réduire</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const quotaModal = document.getElementById('quotaModal')
+  quotaModal.addEventListener('show.bs.modal', event => {
+    const button = event.relatedTarget
+    const id = button.getAttribute('data-id')
+    const user = button.getAttribute('data-user')
+    const type = button.getAttribute('data-type')
+    const jours = button.getAttribute('data-jours')
+
+    // Remplir les champs du modal
+    quotaModal.querySelector('#quotaTitle').textContent = "Mise à jour quota - " + user
+    quotaModal.querySelector('#quotaId').value = id
+    quotaModal.querySelector('#quotaType').value = type
+    quotaModal.querySelector('#quotaJours').value = jours
+
+    // Mettre à jour l'action du formulaire
+    document.getElementById('quotaForm').action = `/mettre_a_jour_quota/${id}/`
+  })
+</script>
+
     <!-- TAB : Historique des validations -->
     <div class="tab-pane fade" id="historique">
       <h5>Historique des validations</h5>
