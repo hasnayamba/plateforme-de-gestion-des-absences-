@@ -137,19 +137,20 @@
         {% for cell in row.cells %}
           {% if cell.quota %}
           <td>
-            {{ cell.jours }}
-            <button 
-                class="btn btn-sm btn-outline-primary quota-btn"
-                data-bs-toggle="modal"
-                data-bs-target="#quotaModal"
-                data-id="{{ cell.quota.id }}"
-                data-user="{{ row.user.get_full_name|escapejs }}"
-                data-type="{{ cell.quota.type_absence.nom|escapejs }}"
-                data-jours="{{ cell.jours }}"
-                data-url="{{ cell.url }}"
-                title="Modifier le quota">
-                Modifier
-            </button>
+          {{ cell.jours }}
+          <button 
+              class="btn btn-sm btn-outline-primary quota-btn"
+              data-bs-toggle="modal"
+              data-bs-target="#quotaModal"
+              data-id="{{ cell.quota.id }}"
+              data-user="{{ row.user.get_full_name|escapejs }}"
+              data-type="{{ cell.quota.type_absence.nom|escapejs }}"
+              data-jours="{{ cell.jours }}"
+              data-url="{{ cell.url }}">
+              Modifier
+          </button>
+        </td>
+
           </td>
           {% else %}
           <td class="text-muted">-</td>
@@ -206,6 +207,7 @@
     </form>
   </div>
 </div>
+
 
 
 
