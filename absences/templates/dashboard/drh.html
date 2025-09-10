@@ -119,6 +119,7 @@
       </table>
     </div>
 <!-- Tableau Quotas -->
+<!-- Tableau Quotas -->
 <div class="tab-pane fade" id="quotas">
   <h5>Quotas des collaborateurs</h5>
   <table class="table table-bordered table-sm align-middle table-hover">
@@ -136,75 +137,54 @@
         <td>{{ row.user.get_full_name }}</td>
         {% for cell in row.cells %}
           {% if cell.quota %}
-          <td>
-          {{ cell.jours }}
-          <button 
-              class="btn btn-sm btn-outline-primary quota-btn"
-              data-bs-toggle="modal"
-              data-bs-target="#quotaModal"
-              data-id="{{ cell.quota.id }}"
-              data-user="{{ row.user.get_full_name|escapejs }}"
-              data-type="{{ cell.quota.type_absence.nom|escapejs }}"
-              data-jours="{{ cell.jours }}"
-              data-url="{{ cell.url }}">
-              Modifier
-          </button>
-        </td>
+            <td>
+              {{ cell.jours }}
+              <!-- Bouton pour ouvrir modal spécifique -->
+              <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quotaModal{{ cell.quota.id }}">
+                Modifier
+              </button>
 
-          </td>
+              <!-- Modal spécifique pour ce quota -->
+              <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <form method="post" action="{{ cell.url }}">{% csrf_token %}
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Quota actuel : <strong>{{ cell.jours }}</strong> jours</p>
+                        <div class="mb-2">
+                          <label>Nombre de jours :</label>
+                          <input type="number" step="0.1" min="0" name="jours" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                          <label>Action :</label>
+                          <select name="operation" class="form-select" required>
+                            <option value="ajouter">Ajouter</option>
+                            <option value="reduire">Réduire</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </td>
           {% else %}
-          <td class="text-muted">-</td>
+            <td class="text-muted">-</td>
           {% endif %}
         {% endfor %}
       </tr>
-  
-</div>
-    <!-- Modal réutilisable pour mise à jour quota -->
-    <div class="modal fade" id="quotaModal" tabindex="-1">
-      <div class="modal-dialog">
-        <form method="post" id="quotaForm">{% csrf_token %}
-          <div class="modal-content">
-              <div class="modal-header">
-                    <h5 class="modal-title">Mise à jour quota - {{ row.user.get_full_name }}</h5>
-              </div>
-            <div class="modal-body">
-              <input type="hidden" id="quotaId" name="quota_id">
-              <div class="mb-2">
-                <label>Collaborateur :</label>
-                <input type="text" id="quotaUser" value="{{ row.user.get_full_name|escapejs }}" class="form-control" readonly>
-              </div>
-              <div class="mb-2">
-                <label>Type d’absence :</label>
-                <input type="text" id="quotaType" value="{{ row.type_absence.nom }}" class="form-control" readonly>
-              </div>
-              <div class="mb-2">
-                <label>Quota actuel :</label>
-                <span id="quotaCurrent"></span>
-              </div>
-              <div class="mb-2">
-                <label>Nombre de jours :</label>
-                <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
-              </div>
-              <div class="mb-2">
-                <label>Action :</label>
-                <select name="operation" class="form-select" required>
-                  <option value="ajouter">Ajouter</option>
-                  <option value="reduire">Réduire</option>
-                </select>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-    {% endfor %}
+      {% endfor %}
     </tbody>
   </table>
-
+</div>
 
 
     <!-- TAB : Historique des validations -->
