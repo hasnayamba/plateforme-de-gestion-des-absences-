@@ -536,7 +536,7 @@ def approuver_absence(request, absence_id):
 # rejet absence
 # -----------------------------
 @login_required
-def rejeter_absence_drh(request, absence_id):
+def rejeter_absence(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
 
     if request.method == "POST":
