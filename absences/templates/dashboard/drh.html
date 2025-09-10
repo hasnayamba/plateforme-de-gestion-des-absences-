@@ -147,7 +147,7 @@
               <!-- Modal spécifique pour ce quota -->
               <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
                 <div class="modal-dialog">
-                  <form method="post" action="{{ cell.url }}">{% csrf_token %}
+                  <form method="post" action="<form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">{% csrf_token %}
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title">Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})</h5>
