@@ -119,7 +119,6 @@
       </table>
     </div>
 <!-- Tableau Quotas -->
-<!-- quotas table -->
 <div class="tab-pane fade" id="quotas">
   <h5>Quotas des collaborateurs</h5>
   <table class="table table-bordered table-sm align-middle table-hover">
@@ -137,24 +136,23 @@
         <td>{{ row.user.get_full_name }}</td>
         {% for cell in row.cells %}
           {% if cell.quota %}
-            <td>
-              {{ cell.jours }}
-              <button 
-                  class="btn btn-sm btn-outline-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#quotaModal"
-                  data-id="{{ quota.id }}"
-                  data-user="{{ quota.user.get_full_name }}"
-                  data-type="{{ quota.type_absence.nom }}"
-                  data-jours="{{ quota.jours_disponibles }}"
-                  data-url="{% url 'mettre_a_jour_quota' quota.id %}"
-                  title="Modifier le quota">
-                  Modifier
-              </button>
-
-            </td>
+          <td>
+            {{ cell.jours }}
+            <button 
+                class="btn btn-sm btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#quotaModal"
+                data-id="{{ cell.quota.id }}"
+                data-user="{{ row.user.get_full_name }}"
+                data-type="{{ cell.quota.type_absence.nom }}"
+                data-jours="{{ cell.jours }}"
+                data-url="{{ cell.url }}"
+                title="Modifier le quota">
+                Modifier
+            </button>
+          </td>
           {% else %}
-            <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
           {% endif %}
         {% endfor %}
       </tr>
@@ -162,6 +160,7 @@
     </tbody>
   </table>
 </div>
+
 
 <!-- Modal réutilisable pour mise à jour quota -->
 <div class="modal fade" id="quotaModal" tabindex="-1">
@@ -206,6 +205,7 @@
     </form>
   </div>
 </div>
+
 
 
     <!-- TAB : Historique des validations -->
@@ -377,13 +377,14 @@ document.addEventListener("DOMContentLoaded", function () {
     if (url) form.action = url;
   });
 
-  // Optionnel : reset modal après fermeture
+  // Reset modal après fermeture
   quotaModal.addEventListener("hidden.bs.modal", function () {
     form.reset();
     quotaModal.querySelector("#quotaCurrent").textContent = '';
   });
 });
 </script>
+
 <style>
   /* Styles pour les badges de statut */
   .badge {
@@ -391,4 +392,7 @@ document.addEventListener("DOMContentLoaded", function () {
     padding: 0.4em 0.6em;
     border-radius: 0.25rem;
   }
+
+
+
 
