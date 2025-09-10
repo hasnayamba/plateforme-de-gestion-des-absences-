@@ -8,3 +8,4 @@ python-dotenv==1.1.1
 sqlparse==0.4.2
 tzdata==2022.1
 whitenoise==6.9.0
+django-storages[boto3]
