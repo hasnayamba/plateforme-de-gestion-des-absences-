@@ -157,58 +157,53 @@
           {% endif %}
         {% endfor %}
       </tr>
-      {% endfor %}
+  
+</div>
+    <!-- Modal réutilisable pour mise à jour quota -->
+    <div class="modal fade" id="quotaModal" tabindex="-1">
+      <div class="modal-dialog">
+        <form method="post" id="quotaForm">{% csrf_token %}
+          <div class="modal-content">
+              <div class="modal-header">
+                    <h5 class="modal-title">Mise à jour quota - {{ row.user.get_full_name }}</h5>
+              </div>
+            <div class="modal-body">
+              <input type="hidden" id="quotaId" name="quota_id">
+              <div class="mb-2">
+                <label>Collaborateur :</label>
+                <input type="text" id="quotaUser" value="{{ row.user.get_full_name|escapejs }}" class="form-control" readonly>
+              </div>
+              <div class="mb-2">
+                <label>Type d’absence :</label>
+                <input type="text" id="quotaType" value="{{ row.type_absence.nom }}" class="form-control" readonly>
+              </div>
+              <div class="mb-2">
+                <label>Quota actuel :</label>
+                <span id="quotaCurrent"></span>
+              </div>
+              <div class="mb-2">
+                <label>Nombre de jours :</label>
+                <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label>Action :</label>
+                <select name="operation" class="form-select" required>
+                  <option value="ajouter">Ajouter</option>
+                  <option value="reduire">Réduire</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Enregistrer</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
     </tbody>
   </table>
-</div>
-
-
-
-<!-- Modal réutilisable pour mise à jour quota -->
-<div class="modal fade" id="quotaModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" id="quotaForm">{% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="quotaTitle">Mise à jour quota</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <input type="hidden" id="quotaId" name="quota_id">
-          <div class="mb-2">
-            <label>Collaborateur :</label>
-            <input type="text" id="quotaUser" class="form-control" readonly>
-          </div>
-          <div class="mb-2">
-            <label>Type d’absence :</label>
-            <input type="text" id="quotaType" class="form-control" readonly>
-          </div>
-          <div class="mb-2">
-            <label>Quota actuel :</label>
-            <span id="quotaCurrent"></span>
-          </div>
-          <div class="mb-2">
-            <label>Nombre de jours :</label>
-            <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
-          </div>
-          <div class="mb-2">
-            <label>Action :</label>
-            <select name="operation" class="form-select" required>
-              <option value="ajouter">Ajouter</option>
-              <option value="reduire">Réduire</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Enregistrer</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-
 
 
 
@@ -393,6 +388,7 @@ document.addEventListener("DOMContentLoaded", function () {
     padding: 0.4em 0.6em;
     border-radius: 0.25rem;
   }
+
 
 
 
