@@ -118,7 +118,7 @@
         </tbody>
       </table>
     </div>
-<!-- Tableau Quotas -->
+
 <!-- Tableau Quotas -->
 <div class="tab-pane fade" id="quotas">
   <h5>Quotas des collaborateurs</h5>
@@ -147,7 +147,8 @@
               <!-- Modal spécifique pour ce quota -->
               <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
                 <div class="modal-dialog">
-                  <form method="post" action="<form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">{% csrf_token %}
+                  <form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">
+                    {% csrf_token %}
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title">Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})</h5>
@@ -157,7 +158,7 @@
                         <p>Quota actuel : <strong>{{ cell.jours }}</strong> jours</p>
                         <div class="mb-2">
                           <label>Nombre de jours :</label>
-                          <input type="number" step="0.1" min="0" name="jours" class="form-control" required>
+                          <input type="number" step="0.1" min="0" name="jours" class="form-control" required value="{{ cell.jours }}">
                         </div>
                         <div class="mb-2">
                           <label>Action :</label>
