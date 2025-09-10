@@ -671,6 +671,7 @@ def mettre_a_jour_quota(request, quota_id):
     quota = get_object_or_404(QuotaAbsence, id=quota_id)
 
     if request.method == 'POST':
+        print("=== POST reçu ===", request.POST)
         jours_str = request.POST.get('jours', '').strip()
         operation = request.POST.get('operation')
 
