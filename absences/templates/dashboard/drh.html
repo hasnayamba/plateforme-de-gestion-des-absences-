@@ -140,17 +140,18 @@
             <td>
               {{ cell.jours }}
               <button 
-                class="btn btn-sm btn-outline-primary ms-2"
-                data-bs-toggle="modal"
-                data-bs-target="#quotaModal"
-                data-id="{{ cell.quota.id }}"
-                data-user="{{ row.user.get_full_name }}"
-                data-type="{{ cell.type_name }}"
-                data-jours="{{ cell.jours }}"
-                data-url="{{ cell.url }}"
-                aria-label="Modifier quota {{ cell.type_name }} pour {{ row.user.get_full_name }}">
-                Modifier
+                  class="btn btn-sm btn-outline-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#quotaModal"
+                  data-id="{{ quota.id }}"
+                  data-user="{{ quota.user.get_full_name }}"
+                  data-type="{{ quota.type_absence.nom }}"
+                  data-jours="{{ quota.jours_disponibles }}"
+                  data-url="{% url 'mettre_a_jour_quota' quota.id %}"
+                  title="Modifier le quota">
+                  Modifier
               </button>
+
             </td>
           {% else %}
             <td class="text-muted">-</td>
@@ -162,24 +163,32 @@
   </table>
 </div>
 
-<!-- Modal réutilisable -->
-<div class="modal fade" id="quotaModal" tabindex="-1" aria-hidden="true">
+<!-- Modal réutilisable pour mise à jour quota -->
+<div class="modal fade" id="quotaModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="post" id="quotaForm">{% csrf_token %}
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="quotaTitle">Mise à jour quota</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="quotaId" name="quota_id">
+          <div class="mb-2">
+            <label>Collaborateur :</label>
+            <input type="text" id="quotaUser" class="form-control" readonly>
+          </div>
           <div class="mb-2">
             <label>Type d’absence :</label>
             <input type="text" id="quotaType" class="form-control" readonly>
           </div>
           <div class="mb-2">
+            <label>Quota actuel :</label>
+            <span id="quotaCurrent"></span>
+          </div>
+          <div class="mb-2">
             <label>Nombre de jours :</label>
             <input type="number" step="0.1" min="0" name="jours" id="quotaJours" class="form-control" required>
-            <small class="text-muted">Actuel : <span id="quotaCurrent"></span></small>
           </div>
           <div class="mb-2">
             <label>Action :</label>
@@ -197,6 +206,7 @@
     </form>
   </div>
 </div>
+
 
     <!-- TAB : Historique des validations -->
     <div class="tab-pane fade" id="historique">
@@ -340,7 +350,6 @@
 {% endblock %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("quotas script loaded");
   const quotaModal = document.getElementById("quotaModal");
   const form = document.getElementById("quotaForm");
 
@@ -349,6 +358,7 @@ document.addEventListener("DOMContentLoaded", function () {
   quotaModal.addEventListener("show.bs.modal", function (event) {
     const button = event.relatedTarget;
     if (!button) return;
+
     const id = button.getAttribute("data-id");
     const user = button.getAttribute("data-user");
     const type = button.getAttribute("data-type");
@@ -358,17 +368,27 @@ document.addEventListener("DOMContentLoaded", function () {
     // Remplir les champs
     quotaModal.querySelector("#quotaTitle").textContent = "Mise à jour quota - " + user;
     quotaModal.querySelector("#quotaId").value = id;
+    quotaModal.querySelector("#quotaUser").value = user;
     quotaModal.querySelector("#quotaType").value = type;
     quotaModal.querySelector("#quotaJours").value = jours;
-    quotaModal.querySelector("#quotaCurrent").textContent = jours || '';
+    quotaModal.querySelector("#quotaCurrent").textContent = jours;
 
-    // Action dynamique (sécurisée par data-url générée côté serveur)
-    if (url) {
-      form.action = url;
-    } else {
-      console.warn("Aucune url fournie sur le bouton modifier (data-url manquante).");
-    }
+    // Action dynamique du formulaire
+    if (url) form.action = url;
+  });
+
+  // Optionnel : reset modal après fermeture
+  quotaModal.addEventListener("hidden.bs.modal", function () {
+    form.reset();
+    quotaModal.querySelector("#quotaCurrent").textContent = '';
   });
 });
 </script>
+<style>
+  /* Styles pour les badges de statut */
+  .badge {
+    font-size: 0.9em;
+    padding: 0.4em 0.6em;
+    border-radius: 0.25rem;
+  }
 

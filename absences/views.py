@@ -664,13 +664,15 @@ def rejeter_absence_drh(request, absence_id):
 # -----------------------------
 # Mettre a jour quota absence
 # -----------------------------
+from decimal import Decimal, InvalidOperation
+
 @login_required
 def mettre_a_jour_quota(request, quota_id):
     quota = get_object_or_404(QuotaAbsence, id=quota_id)
 
     if request.method == 'POST':
         try:
-            jours = int(request.POST.get('jours'))
+            jours = Decimal(request.POST.get('jours'))
             operation = request.POST.get('operation')  # "ajouter" ou "reduire"
 
             if jours <= 0:
@@ -692,10 +694,11 @@ def mettre_a_jour_quota(request, quota_id):
 
             quota.save()
 
-        except (ValueError, TypeError):
+        except (InvalidOperation, TypeError):
             messages.error(request, "Veuillez entrer un nombre de jours valide.")
 
     return redirect('dashboard_drh')
+
 
 # -----------------------------
 # Dashboard pour le Directeur Pays
