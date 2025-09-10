@@ -22,6 +22,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from calendar import month_name
 from django.db.models.functions import ExtractMonth
 from collections import OrderedDict
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render
 from django.urls import reverse
 from .models import Recuperation
@@ -664,38 +665,43 @@ def rejeter_absence_drh(request, absence_id):
 # -----------------------------
 # Mettre a jour quota absence
 # -----------------------------
-from decimal import Decimal, InvalidOperation
 
 @login_required
 def mettre_a_jour_quota(request, quota_id):
     quota = get_object_or_404(QuotaAbsence, id=quota_id)
 
     if request.method == 'POST':
+        jours_str = request.POST.get('jours', '').strip()
+        operation = request.POST.get('operation')
+
+        if not jours_str:
+            messages.error(request, "Veuillez entrer un nombre de jours.")
+            return redirect('dashboard_drh')
+
         try:
-            jours = Decimal(request.POST.get('jours'))
-            operation = request.POST.get('operation')  # "ajouter" ou "reduire"
+            jours = Decimal(jours_str)
+        except InvalidOperation:
+            messages.error(request, "Veuillez entrer un nombre de jours valide (ex: 1.5).")
+            return redirect('dashboard_drh')
 
-            if jours <= 0:
-                messages.error(request, "Le nombre de jours doit être supérieur à zéro.")
+        if jours <= 0:
+            messages.error(request, "Le nombre de jours doit être supérieur à zéro.")
+            return redirect('dashboard_drh')
+
+        if operation == 'ajouter':
+            quota.jours_disponibles += jours
+            messages.success(request, f"{jours} jour(s) ajouté(s) avec succès.")
+        elif operation == 'reduire':
+            if jours > quota.jours_disponibles:
+                messages.error(request, "Impossible de réduire au-delà du quota disponible.")
                 return redirect('dashboard_drh')
+            quota.jours_disponibles -= jours
+            messages.success(request, f"{jours} jour(s) réduit(s) avec succès.")
+        else:
+            messages.error(request, "Opération non reconnue.")
+            return redirect('dashboard_drh')
 
-            if operation == 'ajouter':
-                quota.jours_disponibles += jours
-                messages.success(request, f"{jours} jour(s) ajouté(s) avec succès.")
-            elif operation == 'reduire':
-                if jours > quota.jours_disponibles:
-                    messages.error(request, "Impossible de réduire au-delà du quota disponible.")
-                    return redirect('dashboard_drh')
-                quota.jours_disponibles -= jours
-                messages.success(request, f"{jours} jour(s) réduit(s) avec succès.")
-            else:
-                messages.error(request, "Opération non reconnue.")
-                return redirect('dashboard_drh')
-
-            quota.save()
-
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Veuillez entrer un nombre de jours valide.")
+        quota.save()
 
     return redirect('dashboard_drh')
 
