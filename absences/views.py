@@ -21,6 +21,9 @@ from django.db.models import Count
 from django.contrib.auth.decorators import login_required, user_passes_test
 from calendar import month_name
 from django.db.models.functions import ExtractMonth
+from collections import OrderedDict
+from django.shortcuts import render
+from django.urls import reverse
 from .models import Recuperation
 from django.http import HttpResponse
 import csv
@@ -559,28 +562,54 @@ def rejeter_absence(request, absence_id):
 # -----------------------------
 # dashboard pour les DRH
 # -----------------------------
+
+
 @login_required
 def dashboard_drh(request):
     # --- Filtres absences
     filters = {}
-    if mois := request.GET.get('mois'):
+    mois = request.GET.get('mois')
+    type_id = request.GET.get('type')
+    statut = request.GET.get('statut')
+
+    if mois:
         filters['date_debut__month'] = int(mois)
-    if type_id := request.GET.get('type'):
+    if type_id:
         filters['type_absence_id'] = type_id
-    if statut := request.GET.get('statut'):
+    if statut:
         filters['statut'] = statut
 
     absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
 
-    # --- Préparer un tableau croisé des quotas
-    quotas = QuotaAbsence.objects.select_related('user', 'type_absence')
+    # --- Types (colonnes)
     types = list(TypeAbsence.objects.all())
-    collaborateurs = {}
-    for quota in quotas:
-        user = quota.user
-        if user not in collaborateurs:
-            collaborateurs[user] = {t.id: None for t in types}  # init avec None
-        collaborateurs[user][quota.type_absence.id] = quota
+
+    # --- Quotas (tous) et préparation d'une structure rows sûre pour le template
+    quota_qs = QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name')
+    # construire une map (user_id, type_id) -> quota
+    quota_map = {}
+    users_ordered = OrderedDict()
+    for q in quota_qs:
+        quota_map[(q.user_id, q.type_absence_id)] = q
+        if q.user_id not in users_ordered:
+            users_ordered[q.user_id] = q.user
+
+    # construire rows : liste de { user: User, cells: [ { quota, jours, url, type_name }, ... ] }
+    rows = []
+    for user in users_ordered.values():
+        cells = []
+        for t in types:
+            q = quota_map.get((user.id, t.id))
+            if q:
+                cells.append({
+                    'quota': q,
+                    'jours': q.jours_disponibles,
+                    'url': reverse('mettre_a_jour_quota', args=[q.id]),
+                    'type_name': t.nom,
+                })
+            else:
+                cells.append({'quota': None, 'type_name': t.nom})
+        rows.append({'user': user, 'cells': cells})
 
     context = {
         'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
@@ -588,7 +617,7 @@ def dashboard_drh(request):
         'absences': absences,
         'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
         'types': types,
-        'collaborateurs': collaborateurs,  # clé = user, valeur = dict quotas
+        'rows': rows,
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
@@ -596,6 +625,8 @@ def dashboard_drh(request):
         'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
     return render(request, 'dashboard/drh.html', context)
+
+
 
 
 # -----------------------------
