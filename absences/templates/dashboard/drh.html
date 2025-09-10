@@ -139,12 +139,12 @@
           <td>
             {{ cell.jours }}
             <button 
-                class="btn btn-sm btn-outline-primary"
+                class="btn btn-sm btn-outline-primary quota-btn"
                 data-bs-toggle="modal"
                 data-bs-target="#quotaModal"
                 data-id="{{ cell.quota.id }}"
-                data-user="{{ row.user.get_full_name }}"
-                data-type="{{ cell.quota.type_absence.nom }}"
+                data-user="{{ row.user.get_full_name|escapejs }}"
+                data-type="{{ cell.quota.type_absence.nom|escapejs }}"
                 data-jours="{{ cell.jours }}"
                 data-url="{{ cell.url }}"
                 title="Modifier le quota">
@@ -160,6 +160,7 @@
     </tbody>
   </table>
 </div>
+
 
 
 <!-- Modal réutilisable pour mise à jour quota -->
@@ -205,6 +206,7 @@
     </form>
   </div>
 </div>
+
 
 
 
@@ -353,10 +355,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const quotaModal = document.getElementById("quotaModal");
   const form = document.getElementById("quotaForm");
 
-  if (!quotaModal) return;
-
   quotaModal.addEventListener("show.bs.modal", function (event) {
-    const button = event.relatedTarget;
+    const button = event.relatedTarget; // le bouton cliqué
     if (!button) return;
 
     const id = button.getAttribute("data-id");
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const jours = button.getAttribute("data-jours");
     const url = button.getAttribute("data-url");
 
-    // Remplir les champs
+    // Remplir la modal
     quotaModal.querySelector("#quotaTitle").textContent = "Mise à jour quota - " + user;
     quotaModal.querySelector("#quotaId").value = id;
     quotaModal.querySelector("#quotaUser").value = user;
@@ -373,17 +373,16 @@ document.addEventListener("DOMContentLoaded", function () {
     quotaModal.querySelector("#quotaJours").value = jours;
     quotaModal.querySelector("#quotaCurrent").textContent = jours;
 
-    // Action dynamique du formulaire
     if (url) form.action = url;
   });
 
-  // Reset modal après fermeture
   quotaModal.addEventListener("hidden.bs.modal", function () {
     form.reset();
     quotaModal.querySelector("#quotaCurrent").textContent = '';
   });
 });
 </script>
+
 
 <style>
   /* Styles pour les badges de statut */
