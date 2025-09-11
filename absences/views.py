@@ -665,16 +665,17 @@ def rejeter_absence_drh(request, absence_id):
 # -----------------------------
 # Mettre a jour quota absence
 # -----------------------------
-
 @login_required
 def mettre_a_jour_quota(request, quota_id):
     quota = get_object_or_404(QuotaAbsence, id=quota_id)
 
     if request.method == 'POST':
         print("=== POST reçu ===", request.POST)
+
         jours_str = request.POST.get('jours', '').strip()
         operation = request.POST.get('operation')
 
+        # Validation basique
         if not jours_str:
             messages.error(request, "Veuillez entrer un nombre de jours.")
             return redirect('dashboard_drh')
@@ -689,6 +690,11 @@ def mettre_a_jour_quota(request, quota_id):
             messages.error(request, "Le nombre de jours doit être supérieur à zéro.")
             return redirect('dashboard_drh')
 
+        # 🔑 Sécurité : si jamais des anciennes lignes sont NULL
+        if quota.jours_disponibles is None:
+            quota.jours_disponibles = Decimal("0.00")
+
+        # Application de l’opération
         if operation == 'ajouter':
             quota.jours_disponibles += jours
             messages.success(request, f"{jours} jour(s) ajouté(s) avec succès.")
