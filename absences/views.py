@@ -24,6 +24,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from calendar import month_name
 from django.db.models.functions import ExtractMonth
 from collections import OrderedDict
+from django.core.files.storage import default_storage
+import mimetypes
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import render
 from django.urls import reverse
@@ -714,14 +716,25 @@ def mettre_a_jour_quota(request, quota_id):
 
     return redirect('dashboard_drh')
 
-
 def telecharger_justificatif(request, file_path):
-    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-    if not os.path.exists(full_path):
-        raise Http404("Fichier introuvable")
-    response = FileResponse(open(full_path, 'rb'), as_attachment=True)
-    return response
+    """
+    Sert un fichier stocké sur Azure Blob Storage directement dans le navigateur.
+    """
+    if default_storage.exists(file_path):
+        # Ouvrir le fichier depuis Azure
+        fichier = default_storage.open(file_path, 'rb')
 
+        # Détecter le type MIME
+        content_type, _ = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = 'application/octet-stream'
+
+        # Retourner le fichier pour affichage inline
+        response = FileResponse(fichier, content_type=content_type)
+        response['Content-Disposition'] = f'inline; filename="{file_path.split("/")[-1]}"'
+        return response
+    else:
+        raise Http404(f"Fichier {file_path} non trouvé sur Azure Blob Storage.")
 
 # -----------------------------
 # Dashboard pour le Directeur Pays
