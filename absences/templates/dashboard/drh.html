@@ -305,11 +305,7 @@
             <td>
               <td>
                 {% if r.justificatif %}
-                  <!-- Lien pour ouvrir -->
-                  <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-sm btn-primary">
-                    <i class="bi bi-eye"></i> Voir
-                  </a>
-                  <!-- Lien pour télécharger -->
+                 <!-- Lien pour télécharger -->
                     <a href="{% url 'telecharger' r.justificatif.name %}" class="btn btn-success">
                       Télécharger
                     </a>

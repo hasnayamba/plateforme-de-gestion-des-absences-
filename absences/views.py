@@ -174,7 +174,6 @@ def dashboard_superieur(request):
                 absence.statut = 'rejete'
                 absence.motif_rejet = motif
             absence.save()
-
             ValidationHistorique.objects.create(
                 absence=absence,
                 utilisateur=request.user,
