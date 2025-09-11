@@ -122,4 +122,13 @@ LOGOUT_REDIRECT_URL = 'login'
 # --- Clé par défaut pour les modèles ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Azure Storage
+AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
+AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")  # ne jamais mettre la clé directement
+AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
+AZURE_OVERWRITE_FILES = False  # Empêche d’écraser un fichier existant
+
+DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
+
+
 
