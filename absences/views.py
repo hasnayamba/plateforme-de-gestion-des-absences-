@@ -10,6 +10,8 @@ from .utils import compter_jours_ouvres
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.http import JsonResponse
+from django.http import FileResponse, Http404
+import os
 import json
 from django.contrib.auth.hashers import make_password
 from django.db.models import Prefetch
@@ -711,6 +713,14 @@ def mettre_a_jour_quota(request, quota_id):
         quota.save()
 
     return redirect('dashboard_drh')
+
+
+def telecharger_justificatif(request, file_path):
+    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+    if not os.path.exists(full_path):
+        raise Http404("Fichier introuvable")
+    response = FileResponse(open(full_path, 'rb'), as_attachment=True)
+    return response
 
 
 # -----------------------------

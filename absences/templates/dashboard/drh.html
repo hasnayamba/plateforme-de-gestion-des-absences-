@@ -310,9 +310,9 @@
                     <i class="bi bi-eye"></i> Voir
                   </a>
                   <!-- Lien pour télécharger -->
-                  <a href="{{ r.justificatif.url }}" download class="btn btn-sm btn-success">
-                    <i class="bi bi-download"></i> Télécharger
-                  </a>
+                    <a href="{% url 'telecharger' r.justificatif.name %}" class="btn btn-success">
+                      Télécharger
+                    </a>
                 {% else %}
                   <span class="text-muted">Aucun fichier</span>
                 {% endif %}
