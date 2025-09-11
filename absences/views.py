@@ -177,9 +177,9 @@ def dashboard_superieur(request):
             ValidationHistorique.objects.create(
                 absence=absence,
                 utilisateur=request.user,
-                role='superieur',
+                role_valide='superieur',
                 decision=decision,
-                motif_rejet=motif if decision == 'rejeter' else ''
+                motif=motif if decision == 'rejeter' else ''
             )
             messages.success(request, f"Demande {decision} avec succès.")
             return redirect('dashboard_superieur')

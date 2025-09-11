@@ -112,33 +112,15 @@ class QuotaAbsence(models.Model):
 # -----------------------------
 
 class ValidationHistorique(models.Model):
-    """
-    Ce modèle enregistre chaque action de validation, modification ou annulation
-    effectuée sur une demande d'absence. Il permet d’avoir un suivi complet.
-    """
-    absence = models.ForeignKey(
-        'Absence',
-        on_delete=models.CASCADE,
-        related_name='historiques',  # Permet d'accéder à absence.historiques
-    )
-    utilisateur = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True  # Garde l'historique même si l'utilisateur est supprimé
-    )
-    action = models.CharField(
-        max_length=255  # Exemple : "approuve_par_superieur", "modifiee_par_collaborateur"
-    )
-    date_action = models.DateTimeField(
-        auto_now_add=True  # Rempli automatiquement à la création
-    )
-    commentaire = models.TextField(
-        blank=True,
-        null=True  # Commentaire optionnel, ex : "Motif d'annulation"
-    )
+    absence = models.ForeignKey('Absence', on_delete=models.CASCADE, related_name='historiques')
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    role_valide = models.CharField(max_length=50)  # admin, drh, dp, superieur
+    decision = models.CharField(max_length=20)     # valider, rejeter
+    motif = models.TextField(blank=True, null=True)
+    date_validation = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.absence} - {self.action} par {self.utilisateur}"
+        return f"{self.absence} - {self.decision} par {self.utilisateur}"
 # -----------------------------
 
 
