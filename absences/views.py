@@ -482,12 +482,13 @@ def mon_quota(request):
 @login_required
 def mes_absences(request):
     absences = Absence.objects.filter(collaborateur=request.user).order_by('-date_creation').prefetch_related(
-        Prefetch('historiques', queryset=ValidationHistorique.objects.order_by('-date_action'))
+        Prefetch('historiques', queryset=ValidationHistorique.objects.order_by('-date_validation'))
     )
     types_absence = TypeAbsence.objects.all()
     jours_feries_qs = JourFerie.objects.all()
     jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
-    statuts_modifiables = ['en_attente', 'approuve_superieur', 'verifie_drh']
+    statuts_modifiables = [s[0] for s in STATUT_ABSENCE if s[0] in ('en_attente', 'approuve_superieur', 'verifie_drh')]
+
 
     return render(request, 'collaborateur/mes_absences.html', {
         'absences': absences,
@@ -495,6 +496,7 @@ def mes_absences(request):
         'jours_feries': jours_feries,
         'statuts_modifiables': statuts_modifiables,
     })
+
 # -----------------------------
 # calendrier des absences
 # -----------------------------

@@ -54,6 +54,12 @@
         </td>
 
         <td>
+          <!-- Historique -->
+          <button type="button" class="btn btn-sm btn-outline-primary"
+                  data-bs-toggle="modal" data-bs-target="#historiqueModal{{ absence.id }}">
+            Historique
+          </button>
+
           {% if absence.statut == 'rejete' %}
             <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#motifRejetModal{{ absence.id }}">
               Voir motif rejet
@@ -76,6 +82,54 @@
           {% endif %}
         </td>
       </tr>
+
+      {# MODALE HISTORIQUE VALIDATION #}
+      <div class="modal fade" id="historiqueModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Historique des validations</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {% if absence.historiques.all %}
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Décision</th>
+                      <th>Validé par</th>
+                      <th>Rôle</th>
+                      <th>Motif</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for h in absence.historiques.all %}
+                      <tr>
+                        <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
+                        <td>
+                          {% if h.decision == 'valider' %}
+                            <span class="badge bg-success">Validé</span>
+                          {% elif h.decision == 'rejeter' %}
+                            <span class="badge bg-danger">Rejeté</span>
+                          {% else %}
+                            {{ h.decision }}
+                          {% endif %}
+                        </td>
+                        <td>{{ h.utilisateur.get_full_name|default:"-" }}</td>
+                        <td>{{ h.role_valide|title }}</td>
+                        <td>{{ h.motif|default:"-" }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <p>Aucun historique disponible.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {# MODALE MOTIF REJET #}
       <div class="modal fade" id="motifRejetModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
@@ -116,7 +170,7 @@
       <div class="modal fade" id="modifierModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
           <form method="post" action="{% url 'modifier_absence' absence.id %}" enctype="multipart/form-data">
-             {% csrf_token %}
+            {% csrf_token %}
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-danger">{{ message }}</div>
@@ -170,7 +224,7 @@
       <div class="modal fade" id="annulerModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
           <form method="post" action="{% url 'annuler_absence' absence.id %}">
-             {% csrf_token %}
+            {% csrf_token %}
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-danger">{{ message }}</div>

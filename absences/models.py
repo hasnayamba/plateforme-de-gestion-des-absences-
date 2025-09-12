@@ -165,15 +165,15 @@ class Absence(models.Model):
     date_modification = models.DateTimeField(auto_now=True)
     
     def dernier_motif_rejet(self):
-        dernier_rejet = self.historiques.filter(action__icontains='rejete').order_by('-date_action').first()
-        if dernier_rejet and dernier_rejet.commentaire:
-            return dernier_rejet.commentaire
+        dernier_rejet = self.historiques.filter(decision='rejeter').order_by('-date_validation').first()
+        if dernier_rejet and dernier_rejet.motif:
+            return dernier_rejet.motif
         return None
 
     def date_rejet(self):
-        dernier_rejet = self.historiques.filter(action__icontains='rejete').order_by('-date_action').first()
+        dernier_rejet = self.historiques.filter(decision='rejeter').order_by('-date_validation').first()
         if dernier_rejet:
-            return dernier_rejet.date_action
+            return dernier_rejet.date_validation
         return None
 
     def a_annulation(self):
@@ -216,7 +216,7 @@ class Absence(models.Model):
             raise ValidationError("Aucun quota défini pour ce type d'absence pour cette année.")
 
     def save(self, *args, **kwargs):
-        from .models import QuotaAbsence
+        from .models import QuotaAbsence, ValidationHistorique
         if self.date_debut and self.nombre_jours:
             jours_restants = self.nombre_jours
             date_courante = self.date_debut
@@ -231,7 +231,8 @@ class Absence(models.Model):
             ValidationHistorique.objects.get_or_create(
                 absence=self,
                 utilisateur=self.collaborateur,
-                action='valide_dp'
+                role_valide='dp',
+                decision='valider'
             )
             annee = self.date_debut.year
             try:
