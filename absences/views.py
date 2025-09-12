@@ -45,20 +45,23 @@ from django.contrib.auth.models import User
 from .models import Absence
 
 def accueil_public(request):
-    # Noms des mois en français
-    mois_noms = [month_name[i].capitalize() for i in range(1, 13)]
+    # Mois en français (plus robuste que locale)
+    mois_noms = [
+        "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+        "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ]
 
-    # Récupérer utilisateurs actifs ayant au moins une absence validée
+    # Utilisateurs ayant au moins une absence validée RH ou DP
     utilisateurs = User.objects.filter(
         profile__actif=True,
-        absences__statut='valide_dp'  # relation 'absences' correspond à related_name dans Absence
+        absences__statut__in=['verifie_drh', 'valide_dp']
     ).distinct().order_by('last_name')
 
     lignes = []
     for user in utilisateurs:
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut='valide_dp'
+            statut__in=['verifie_drh', 'valide_dp']
         ).order_by('date_debut')
 
         absences_par_mois = [[] for _ in range(12)]
@@ -79,6 +82,7 @@ def accueil_public(request):
         'mois_noms': mois_noms,
         'lignes': lignes,
     })
+
 # -----------------------------
 # Login Avec des profiles
 # -----------------------------

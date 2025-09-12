@@ -20,7 +20,7 @@
 
     <!-- Contenu principal -->
     <div class="container mt-4">
-        <h4 class="text-center mb-4">Tableau Annuel des Absences Validées</h4>
+        <h4 class="text-center mb-4">Tableau Annuel des Absences</h4>
 
         {% if lignes %}
         <div class="table-responsive">
@@ -43,10 +43,18 @@
                                     {% if absences_mois %}
                                         {% for absence in absences_mois %}
                                             <div class="mb-1">
-                                                <span class="badge"
-                                                    style="background-color: {{ absence.type_absence.couleur }}; fontzize: 0.9em;">
-                                                    {{ absence.type_absence.nom|slice:":10"|upper }}
-                                                </span><br>
+                                                {% if absence.statut == "verifie_drh" %}
+                                                    <span class="badge bg-warning text-dark" title="Validée RH">
+                                                        RH
+                                                    </span>
+                                                {% elif absence.statut == "valide_dp" %}
+                                                    <span class="badge"
+                                                          style="background-color: {{ absence.type_absence.couleur }}; font-size: 0.9em;"
+                                                          title="Validée DP - {{ absence.type_absence.nom }}">
+                                                        {{ absence.type_absence.nom|slice:":10"|upper }}
+                                                    </span>
+                                                {% endif %}
+                                                <br>
                                                 <small>{{ absence.date_debut|date:"M d" }} → {{ absence.date_fin|date:"M d" }}</small>
                                             </div>
                                         {% endfor %}
@@ -61,8 +69,15 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Légende -->
+        <div class="mt-3">
+            <h6>Légende :</h6>
+            <span class="badge bg-warning text-dark">RH</span> = Absence validée par la RH  
+            <span class="badge bg-secondary">Couleur type</span> = Absence validée par le DP
+        </div>
         {% else %}
-            <p class="text-center text-muted">Aucune absence validée trouvée.</p>
+            <p class="text-center text-muted">Aucune absence trouvée.</p>
         {% endif %}
     </div>
 

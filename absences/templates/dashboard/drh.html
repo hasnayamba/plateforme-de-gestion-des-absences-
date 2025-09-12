@@ -57,11 +57,13 @@
                     <p><strong>Jours demandés :</strong> {{ absence.nombre_jours }}</p>
                    <p><strong>Quotas disponibles :</strong></p>
                       <ul>
-                        {% for q in absence.collaborateur.quotas.all %}
-                          <li>{{ q.type_absence.nom }} : {{ q.jours_disponibles }} jours</li>
-                        {% empty %}
-                          <li>Aucun quota défini</li>
-                        {% endfor %}
+                       {% with quota=absence.collaborateur.quotas.filter(type_absence=absence.type_absence, annee=absence.date_debut.year).first %}
+                        {% if quota %}
+                          <p><strong>Quota disponible :</strong> {{ quota.jours_disponibles }} jours</p>
+                        {% else %}
+                          <p class="text-danger"><em>Aucun quota défini pour ce type d’absence en {{ absence.date_debut.year }}</em></p>
+                        {% endif %}
+                      {% endwith %}
                       </ul>
                   </div>
                   <div class="modal-footer">
