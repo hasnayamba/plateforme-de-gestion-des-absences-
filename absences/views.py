@@ -625,7 +625,7 @@ def dashboard_drh(request):
         'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
         'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
-        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
+        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_validation'),
         'types': types,
         'absence_statuts': Absence.STATUTS,
         'rows': rows,

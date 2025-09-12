@@ -207,7 +207,7 @@
         <tbody>
           {% for h in historiques %}
           <tr>
-            <td>{{ h.date_action|date:"d/m/Y H:i" }}</td>
+            <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
             <td>{{ h.absence.collaborateur.get_full_name }}</td>
             <td>{{ h.absence.type_absence.nom }}</td>
             <td>{{ h.action }}</td>
