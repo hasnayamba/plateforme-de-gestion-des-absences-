@@ -576,40 +576,48 @@ def rejeter_absence(request, absence_id):
 
 @login_required
 def dashboard_drh(request):
-    # --- Filtres absences
-    filters = {}
+    # --- Récupération des filtres
     mois = request.GET.get('mois')
     type_id = request.GET.get('type')
     statut = request.GET.get('statut')
 
+    filters = {}
     if mois:
-        filters['date_debut__month'] = int(mois)
+        try:
+            filters['date_debut__month'] = int(mois)
+        except ValueError:
+            pass
     if type_id:
-        filters['type_absence_id'] = type_id
+        try:
+            filters['type_absence_id'] = int(type_id)
+        except ValueError:
+            pass
     if statut:
         filters['statut'] = statut
 
+    # --- Absences filtrées
     absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
 
-    # --- Types (colonnes)
+    # --- Types d'absence pour les colonnes
     types = list(TypeAbsence.objects.all())
 
-    # --- Quotas (tous) et préparation d'une structure rows sûre pour le template
+    # --- Quotas
     quota_qs = QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name')
-    # construire une map (user_id, type_id) -> quota
     quota_map = {}
     users_ordered = OrderedDict()
     for q in quota_qs:
-        quota_map[(q.user_id, q.type_absence_id)] = q
+        quota_map[(q.user_id, q.type_absence_id, q.annee)] = q
         if q.user_id not in users_ordered:
             users_ordered[q.user_id] = q.user
 
-    # construire rows : liste de { user: User, cells: [ { quota, jours, url, type_name }, ... ] }
+    # Construire les lignes pour le tableau de quotas
     rows = []
     for user in users_ordered.values():
         cells = []
         for t in types:
-            q = quota_map.get((user.id, t.id))
+            # On prend le quota pour l'année courante
+            annee_courante = Absence.objects.first().date_debut.year if Absence.objects.exists() else 2025
+            q = quota_map.get((user.id, t.id, annee_courante))
             if q:
                 cells.append({
                     'quota': q,
@@ -621,21 +629,30 @@ def dashboard_drh(request):
                 cells.append({'quota': None, 'type_name': t.nom})
         rows.append({'user': user, 'cells': cells})
 
+    # --- Pré-calcul des quotas pour les absences à vérifier
+    absences_a_verifier = Absence.objects.filter(statut='en_attente').select_related('collaborateur', 'type_absence')
+    for absence in absences_a_verifier:
+        key = (absence.collaborateur.id, absence.type_absence.id, absence.date_debut.year)
+        absence.quota_disponible = quota_map.get(key)
+
+    # --- Contexte
     context = {
-        'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
+        'absences_a_verifier': absences_a_verifier,
         'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
         'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_validation'),
         'types': types,
-        'absence_statuts': Absence.STATUTS,
         'rows': rows,
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
         'statut_selectionne': statut,
+        'absence_statuts': STATUT_ABSENCE,
         'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
+
     return render(request, 'dashboard/drh.html', context)
+
 
 
 @login_required
