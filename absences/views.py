@@ -638,6 +638,20 @@ def dashboard_drh(request):
     return render(request, 'dashboard/drh.html', context)
 
 
+@login_required
+def modifier_absence(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+    if request.method == "POST":
+        commentaire = request.POST.get("commentaire")
+        # tu pourrais enregistrer le commentaire dans historique
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            action="amélioration demandée",
+            commentaire=commentaire,
+        )
+        messages.info(request, "Suggestion d’amélioration envoyée.")
+    return redirect("dashboard_drh")
 
 
 # -----------------------------
@@ -662,16 +676,19 @@ def verifier_absence(request, absence_id):
 @login_required
 def rejeter_absence_drh(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
-    absence.statut = 'rejete'
-    absence.save()
+    if request.method == "POST":
+        commentaire = request.POST.get("commentaire", "Rejeté par la DRH")
+        absence.statut = "rejete"
+        absence.save()
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            action="rejet",
+            commentaire=commentaire,
+        )
+        messages.warning(request, "Absence rejetée.")
+    return redirect("dashboard_drh")
 
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        action='rejete',
-        commentaire="Rejeté par la DRH"
-    )
-    return redirect('dashboard_drh')
 # -----------------------------
 # Mettre a jour quota absence
 # -----------------------------

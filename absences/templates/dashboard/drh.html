@@ -308,9 +308,8 @@
               <td>
                 {% if r.justificatif %}
                  <!-- Lien pour télécharger -->
-                    <a href="{% url 'telecharger' r.justificatif.name %}" class="btn btn-success">
-                      Télécharger
-                    </a>
+                    <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-success">Télécharger</a>
+
                 {% else %}
                   <span class="text-muted">Aucun fichier</span>
                 {% endif %}
