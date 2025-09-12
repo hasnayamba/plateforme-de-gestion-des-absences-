@@ -77,7 +77,7 @@ class AbsenceAdmin(admin.ModelAdmin):
 # -----------------------------
 @admin.register(ValidationHistorique)
 class ValidationHistoriqueAdmin(admin.ModelAdmin):
-    list_display = ('absence', 'utilisateur', 'action', 'date_action')
-    list_filter = ('action', 'date_action')
+    list_display = ('absence', 'utilisateur', 'role_valide', 'decision', 'date_validation')
+    list_filter = ('role_valide', 'decision', 'date_validation')
     search_fields = ('utilisateur__username', 'absence__collaborateur__username')
     autocomplete_fields = ['absence', 'utilisateur']
