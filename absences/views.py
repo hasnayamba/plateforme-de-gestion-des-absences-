@@ -654,7 +654,6 @@ def dashboard_drh(request):
     return render(request, 'dashboard/drh.html', context)
 
 
-
 @login_required
 def modifier_absence(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
