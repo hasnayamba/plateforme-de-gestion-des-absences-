@@ -627,6 +627,7 @@ def dashboard_drh(request):
         'absences': absences,
         'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
         'types': types,
+        'absence_statuts': Absence.STATUTS,
         'rows': rows,
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
