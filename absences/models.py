@@ -114,8 +114,8 @@ class QuotaAbsence(models.Model):
 class ValidationHistorique(models.Model):
     absence = models.ForeignKey('Absence', on_delete=models.CASCADE, related_name='historiques')
     utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    role_valide = models.CharField(max_length=50)  # admin, drh, dp, superieur
-    decision = models.CharField(max_length=20)     # valider, rejeter
+    role_valide = models.CharField(max_length=50,null=True)  # admin, drh, dp, superieur
+    decision = models.CharField(max_length=20,null=True, default=False)     # valider, rejeter
     motif = models.TextField(blank=True, null=True)
     date_validation = models.DateTimeField(auto_now_add=True)
 
