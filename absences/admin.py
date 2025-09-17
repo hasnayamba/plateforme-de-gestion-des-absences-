@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     TypeAbsence, JourFerie, Annee, Mois, Profile,
-    QuotaAbsence, Absence, ValidationHistorique
+    QuotaAbsence, Absence, ValidationHistorique, Recuperation
 )
 
 # -----------------------------
@@ -23,7 +23,7 @@ class JourFerieAdmin(admin.ModelAdmin):
     ordering = ('date',)
 
 # -----------------------------
-# Annee
+# Année
 # -----------------------------
 @admin.register(Annee)
 class AnneeAdmin(admin.ModelAdmin):
@@ -81,3 +81,13 @@ class ValidationHistoriqueAdmin(admin.ModelAdmin):
     list_filter = ('role_valide', 'decision', 'date_validation')
     search_fields = ('utilisateur__username', 'absence__collaborateur__username')
     autocomplete_fields = ['absence', 'utilisateur']
+
+# -----------------------------
+# Récupérations
+# -----------------------------
+@admin.register(Recuperation)
+class RecuperationAdmin(admin.ModelAdmin):
+    list_display = ('utilisateur', 'motif', 'date_debut', 'nombre_jours', 'date_soumission')
+    search_fields = ('utilisateur__username', 'utilisateur__first_name', 'utilisateur__last_name', 'motif')
+    list_filter = ('date_debut',)
+    readonly_fields = ('date_soumission',)

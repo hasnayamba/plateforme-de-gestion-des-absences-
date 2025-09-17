@@ -43,45 +43,61 @@ from django.db.models import Q
 from calendar import month_name
 from django.contrib.auth.models import User
 from .models import Absence
+from django.shortcuts import render
+from django.contrib.auth.models import User
+from decimal import Decimal
+from .models import Absence, Recuperation   # <-- importer Recuperation
 
 def accueil_public(request):
-    # Mois en français (plus robuste que locale)
+    # Mois en français
     mois_noms = [
         "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
         "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ]
 
-    # Utilisateurs ayant au moins une absence validée RH ou DP
-    utilisateurs = User.objects.filter(
-        profile__actif=True,
-        absences__statut__in=['verifie_drh', 'valide_dp']
-    ).distinct().order_by('last_name')
+    # Utilisateurs actifs
+    utilisateurs = User.objects.filter(profile__actif=True).distinct().order_by("last_name")
 
     lignes = []
     for user in utilisateurs:
+        # Absences validées RH ou DP
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut__in=['verifie_drh', 'valide_dp']
-        ).order_by('date_debut')
+            statut__in=["verifie_drh", "valide_dp"]
+        ).order_by("date_debut")
+
+        # Récupérations (tous statuts)
+        recups = Recuperation.objects.filter(
+            utilisateur=user
+        ).order_by("date_debut")
 
         absences_par_mois = [[] for _ in range(12)]
-        total_absences = 0.0
+        total_absences = Decimal(0)
 
+        # Ajouter les absences
         for absence in absences:
+            absence.obj_type = "Absence"   # ✅ Tag type
             mois = absence.date_debut.month - 1
             absences_par_mois[mois].append(absence)
             total_absences += absence.duree()
 
+        # Ajouter les récupérations
+        for recup in recups:
+            recup.obj_type = "Recuperation"  # ✅ Tag type
+            mois = recup.date_debut.month - 1
+            absences_par_mois[mois].append(recup)
+
         lignes.append({
-            'user': user,
-            'mois': absences_par_mois,
-            'total': total_absences,
+            "user": user,
+            "mois": absences_par_mois,
+            "total": total_absences,  # total des absences uniquement
         })
 
-    return render(request, 'accueil.html', {
-        'mois_noms': mois_noms,
-        'lignes': lignes,
+    return render(request, "accueil.html", {
+        "mois_noms": mois_noms,
+        "lignes": lignes,
     })
+
 
 # -----------------------------
 # Login Avec des profiles
@@ -238,7 +254,7 @@ def soumettre_absence(request, absence_id=None):
     if absence_id:
         absence = get_object_or_404(Absence, id=absence_id, collaborateur=request.user)
 
-    # Initialisation des valeurs du formulaire (vide ou pré-remplies si modification)
+    # Pré-remplissage pour modification
     form_data = {
         'type_absence': absence.type_absence.id if absence else '',
         'date_debut': absence.date_debut.strftime('%Y-%m-%d') if absence else '',
@@ -286,7 +302,7 @@ def soumettre_absence(request, absence_id=None):
                 'form_data': form_data,
             })
 
-        # Vérification du quota selon l'année de la date de début
+        # Vérification du quota (en plus du clean)
         annee_demande = date_debut_obj.year
         if not verifier_quota(request.user, type_absence, nombre_jours_float, annee_demande):
             messages.error(request, f"Quota insuffisant pour ce type d'absence pour l'année {annee_demande}.")
@@ -299,35 +315,36 @@ def soumettre_absence(request, absence_id=None):
 
         # Création ou modification de l'absence
         if absence:
-            # Modification
+            # --- Modification ---
             absence.type_absence = type_absence
             absence.date_debut = date_debut_obj
             absence.nombre_jours = nombre_jours_float
             absence.raison = raison
+            absence.statut = 'en_attente'  # repasse à l’état initial
             if justificatif:
                 absence.justificatif = justificatif
-                absence.statut = 'en_attente'
-                absence.approuve_par_superieur = False
-                absence.verifie_par_drh = False
-                absence.valide_par_dp = False
-                absence.save()
+
+            absence.full_clean()
+            absence.save()
 
             ValidationHistorique.objects.create(
                 absence=absence,
                 utilisateur=request.user,
-                action='modifiee_par_collaborateur',
-                commentaire="Demande modifiée par le collaborateur"
+                decision='modifiee_par_collaborateur',
+                motif="Demande modifiée par le collaborateur"
             )
             messages.success(request, "Demande d'absence modifiée avec succès.")
+
         else:
-            # Création
+            # --- Création ---
             absence = Absence(
                 collaborateur=request.user,
                 type_absence=type_absence,
                 date_debut=date_debut_obj,
                 nombre_jours=nombre_jours_float,
                 raison=raison,
-                justificatif=justificatif
+                justificatif=justificatif,
+                statut='en_attente'
             )
             absence.full_clean()
             absence.save()
@@ -342,6 +359,7 @@ def soumettre_absence(request, absence_id=None):
         'absence': absence,
         'form_data': form_data,
     })
+
   
 # -----------------------------
 # Soummettre une récupération
@@ -350,20 +368,21 @@ def soumettre_absence(request, absence_id=None):
 
 @login_required
 def soumettre_recuperation(request):
-    if request.method == 'POST':
-        motif = request.POST.get('motif')
-        justificatif = request.FILES.get('justificatif')
+    if request.method == "POST":
+        motif = request.POST.get("motif")
+        justificatif = request.FILES.get("justificatif")
+        date_debut = request.POST.get("date_debut")
+        nombre_jours = request.POST.get("nombre_jours")
 
-        if motif and justificatif:
-            Recuperation.objects.create(
-                utilisateur=request.user,
-                motif=motif,
-                justificatif=justificatif
-            )
-            messages.success(request, "Votre demande de récupération a été transmise à la RH.")
-        else:
-            messages.error(request, "Veuillez remplir tous les champs.")
-    return redirect('dashboard_collaborateur')  # change si le nom est différent
+        Recuperation.objects.create(
+            utilisateur=request.user,
+            motif=motif,
+            justificatif=justificatif,
+            date_debut=date_debut,
+            nombre_jours=nombre_jours,
+        )
+        messages.success(request, "Récupération soumise avec succès.")
+        return redirect('dashboard_collaborateur')  
   
     
 # -----------------------------
@@ -372,33 +391,37 @@ def soumettre_recuperation(request):
     
 @login_required
 def annuler_absence(request, absence_id):
-    absence = get_object_or_404(Absence, id=absence_id)
+    absence = get_object_or_404(Absence, id=absence_id, collaborateur=request.user)
 
-    if absence.collaborateur != request.user:
-        messages.error(request, "Vous n'êtes pas autorisé à annuler cette absence.")
+    if absence.statut not in ['en_attente', 'approuve_superieur', 'verifie_drh', 'valide_dp']:
+        messages.error(request, "Cette absence ne peut pas être annulée.")
         return redirect('mes_absences')
 
-    if request.method == 'POST':
-        motif = request.POST.get('motif')
+    if request.method == "POST":
+        motif = request.POST.get('motif_annulation')
+        if not motif:
+            messages.error(request, "Veuillez fournir un motif d'annulation.")
+            return redirect('annuler_absence', absence_id=absence.id)
+
+        absence.statut = 'annulee'
         absence.annulee_par_collaborateur = True
         absence.motif_annulation = motif
-        absence.statut = 'annulee'
         absence.save()
 
         ValidationHistorique.objects.create(
             absence=absence,
             utilisateur=request.user,
-            action='annulee_par_collaborateur',
-            commentaire=f"Motif : {motif}"
+            decision='annulee',
+            motif=motif
         )
 
-        # TODO : notifier le supérieur et l’admin par mail ou sur la plateforme
         messages.success(request, "Votre demande a été annulée avec succès.")
         return redirect('mes_absences')
 
-    return render(request, 'collaborateur/soumettre_absence.html', {
-        'absence': absence
+    return render(request, 'collaborateur/annuler_absence.html', {
+        'absence': absence,
     })
+
     
     
 
@@ -408,17 +431,13 @@ def annuler_absence(request, absence_id):
     
 @login_required
 def modifier_absence(request, absence_id):
-    absence = get_object_or_404(Absence, id=absence_id)
+    absence = get_object_or_404(Absence, id=absence_id, collaborateur=request.user)
 
-    if absence.collaborateur != request.user:
-        messages.error(request, "Vous n'avez pas l'autorisation de modifier cette demande.")
+    if absence.statut not in ['en_attente', 'rejete']:
+        messages.error(request, "Vous ne pouvez modifier qu'une demande en attente ou rejetée.")
         return redirect('mes_absences')
 
-    if absence.statut not in ['en_attente', 'approuve_superieur', 'verifie_drh']:
-        messages.error(request, "Cette demande ne peut plus être modifiée.")
-        return redirect('mes_absences')
-
-    if request.method == 'POST':
+    if request.method == "POST":
         type_id = request.POST.get('type_absence')
         date_debut = request.POST.get('date_debut')
         nombre_jours = request.POST.get('nombre_jours')
@@ -426,45 +445,42 @@ def modifier_absence(request, absence_id):
         justificatif = request.FILES.get('justificatif')
 
         try:
-            absence.type_absence = TypeAbsence.objects.get(id=type_id)
-            absence.date_debut = datetime.strptime(date_debut, "%Y-%m-%d").date()
-            absence.nombre_jours = float(nombre_jours)
-            absence.raison = raison
-            if justificatif:
-                absence.justificatif = justificatif
+            type_absence = TypeAbsence.objects.get(pk=type_id)
+            date_debut_obj = datetime.strptime(date_debut, "%Y-%m-%d").date()
+            nombre_jours_float = float(nombre_jours)
+        except Exception:
+            messages.error(request, "Données invalides.")
+            return redirect('modifier_absence', absence_id=absence.id)
 
-            # Réinitialise le statut
-            absence.statut = 'en_attente'
-            absence.approuve_par_superieur = False
-            absence.verifie_par_drh = False
-            absence.valide_par_dp = False
-            absence.save()
+        # Mise à jour
+        absence.type_absence = type_absence
+        absence.date_debut = date_debut_obj
+        absence.nombre_jours = nombre_jours_float
+        absence.raison = raison
+        if justificatif:
+            absence.justificatif = justificatif
 
-            ValidationHistorique.objects.create(
-                absence=absence,
-                utilisateur=request.user,
-                action='modifiee_par_collaborateur',
-                commentaire="Demande modifiée par le collaborateur"
-            )
+        absence.statut = 'en_attente'
+        absence.approuve_par_superieur = False
+        absence.verifie_par_drh = False
+        absence.valide_par_dp = False
+        absence.save()
 
-            messages.success(request, "Demande d'absence modifiée avec succès.")
-            return redirect('mes_absences')
+        # Historique
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            decision='modifiee_par_collaborateur',
+            motif="Demande modifiée par le collaborateur"
+        )
 
-        except Exception as e:
-            messages.error(request, f"Erreur lors de la modification : {e}")
-            return redirect(request.path)
+        messages.success(request, "Votre demande a été modifiée et renvoyée en validation.")
+        return redirect('mes_absences')
 
-    types_absence = TypeAbsence.objects.all()
-     # Partie GET (affichage du formulaire)
-    jours_feries_qs = JourFerie.objects.all()
-    jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
-
-    return render(request, 'collaborateur/soumettre_absence.html', {
+    return render(request, 'collaborateur/modifier_absence.html', {
         'absence': absence,
-        'types_absence': types_absence,
-        'jours_feries': jours_feries,
+        'types_absence': TypeAbsence.objects.all(),
     })
-
 
 
 # -----------------------------
@@ -479,24 +495,58 @@ def mon_quota(request):
 # -----------------------------
 # liste des absences du collaborateur
 # -----------------------------
+from datetime import timedelta
+
+from datetime import timedelta
+from django.db.models import Prefetch
+
 @login_required
 def mes_absences(request):
+    # 1️⃣ Récupérer toutes les absences
     absences = Absence.objects.filter(collaborateur=request.user).order_by('-date_creation').prefetch_related(
         Prefetch('historiques', queryset=ValidationHistorique.objects.order_by('-date_validation'))
     )
+
+    # 2️⃣ Récupérer toutes les récupérations
+    recuperations = Recuperation.objects.filter(utilisateur=request.user).order_by('-date_soumission')
+
+    # 3️⃣ Préparer les récupérations pour le template
+    for r in recuperations:
+        r.type_demande = 'Recuperation'
+        if not hasattr(r, 'statut') or r.statut is None:
+            r.statut = 'en_attente'
+        # Gestion de la date de fin
+        if float(r.nombre_jours) <= 1:
+            r.date_fin = r.date_debut
+        else:
+            r.date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
+
+    # 4️⃣ Préparer les absences pour le template
+    for a in absences:
+        a.type_demande = 'Absence'
+        if not hasattr(a, 'date_fin') or a.date_fin is None:
+            if float(a.nombre_jours) <= 1:
+                a.date_fin = a.date_debut
+            else:
+                a.date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
+
+    # 5️⃣ Fusionner et trier par date de début décroissante
+    demandes = sorted(list(absences) + list(recuperations), key=lambda x: x.date_debut, reverse=True)
+
+    # 6️⃣ Types d'absence et jours fériés
     types_absence = TypeAbsence.objects.all()
     jours_feries_qs = JourFerie.objects.all()
     jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
+
+    # 7️⃣ Statuts modifiables pour les absences
     statuts_modifiables = [s[0] for s in STATUT_ABSENCE if s[0] in ('en_attente', 'approuve_superieur', 'verifie_drh')]
 
-
     return render(request, 'collaborateur/mes_absences.html', {
-        'absences': absences,
+        'absences': demandes,
         'types_absence': types_absence,
         'jours_feries': jours_feries,
         'statuts_modifiables': statuts_modifiables,
     })
-
 # -----------------------------
 # calendrier des absences
 # -----------------------------
@@ -539,8 +589,8 @@ def approuver_absence(request, absence_id):
     ValidationHistorique.objects.create(
         absence=absence,
         utilisateur=request.user,
-        action='approuve_par_superieur',
-        commentaire="Approuvé par le supérieur"
+        decision='approuve_par_superieur',
+        motif="Approuvé par le supérieur"
     )
     return redirect('dashboard_superieur')
 
@@ -560,8 +610,8 @@ def rejeter_absence(request, absence_id):
         ValidationHistorique.objects.create(
             absence=absence,
             utilisateur=request.user,
-            action="rejete",
-            commentaire=motif
+            decision="rejete",
+            motif=motif
         )
         messages.success(request, "L’absence a bien été rejetée.")
         return redirect("dashboard_drh")
@@ -576,40 +626,48 @@ def rejeter_absence(request, absence_id):
 
 @login_required
 def dashboard_drh(request):
-    # --- Filtres absences
-    filters = {}
+    # --- Récupération des filtres
     mois = request.GET.get('mois')
     type_id = request.GET.get('type')
     statut = request.GET.get('statut')
 
+    filters = {}
     if mois:
-        filters['date_debut__month'] = int(mois)
+        try:
+            filters['date_debut__month'] = int(mois)
+        except ValueError:
+            pass
     if type_id:
-        filters['type_absence_id'] = type_id
+        try:
+            filters['type_absence_id'] = int(type_id)
+        except ValueError:
+            pass
     if statut:
         filters['statut'] = statut
 
+    # --- Absences filtrées
     absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
 
-    # --- Types (colonnes)
+    # --- Types d'absence pour les colonnes
     types = list(TypeAbsence.objects.all())
 
-    # --- Quotas (tous) et préparation d'une structure rows sûre pour le template
+    # --- Quotas
     quota_qs = QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name')
-    # construire une map (user_id, type_id) -> quota
     quota_map = {}
     users_ordered = OrderedDict()
     for q in quota_qs:
-        quota_map[(q.user_id, q.type_absence_id)] = q
+        quota_map[(q.user_id, q.type_absence_id, q.annee)] = q
         if q.user_id not in users_ordered:
             users_ordered[q.user_id] = q.user
 
-    # construire rows : liste de { user: User, cells: [ { quota, jours, url, type_name }, ... ] }
+    # Construire les lignes pour le tableau de quotas
     rows = []
     for user in users_ordered.values():
         cells = []
         for t in types:
-            q = quota_map.get((user.id, t.id))
+            # On prend le quota pour l'année courante
+            annee_courante = Absence.objects.first().date_debut.year if Absence.objects.exists() else 2025
+            q = quota_map.get((user.id, t.id, annee_courante))
             if q:
                 cells.append({
                     'quota': q,
@@ -621,34 +679,50 @@ def dashboard_drh(request):
                 cells.append({'quota': None, 'type_name': t.nom})
         rows.append({'user': user, 'cells': cells})
 
+    # --- Pré-calcul des quotas pour les absences à vérifier
+    absences_a_verifier = Absence.objects.filter(statut='en_attente').select_related('collaborateur', 'type_absence')
+    for absence in absences_a_verifier:
+        key = (absence.collaborateur.id, absence.type_absence.id, absence.date_debut.year)
+        absence.quota_disponible = quota_map.get(key)
+
+    # --- Contexte
     context = {
-        'absences_a_verifier': Absence.objects.filter(statut='en_attente'),
+        'absences_a_verifier': absences_a_verifier,
         'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
-        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_action'),
+        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_validation'),
         'types': types,
-        'absence_statuts': Absence.STATUTS,
         'rows': rows,
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
         'statut_selectionne': statut,
+        'absence_statuts': STATUT_ABSENCE,
         'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
+
     return render(request, 'dashboard/drh.html', context)
+
+@login_required
+def valider_recuperation(request, recuperation_id):
+    recuperation = get_object_or_404(Recuperation, id=recuperation_id)
+    if recuperation.statut == 'en_attente':
+        recuperation.statut = 'valide'
+        recuperation.save()
+        messages.success(request, f"La récupération de {recuperation.utilisateur.get_full_name} a été validée.")
+    return redirect('dashboard_drh')
 
 
 @login_required
-def modifier_absence(request, absence_id):
+def modifier_absence_drh(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
     if request.method == "POST":
         commentaire = request.POST.get("commentaire")
-        # tu pourrais enregistrer le commentaire dans historique
         ValidationHistorique.objects.create(
             absence=absence,
             utilisateur=request.user,
-            action="amélioration demandée",
-            commentaire=commentaire,
+            decision="amélioration",
+            motif=commentaire,
         )
         messages.info(request, "Suggestion d’amélioration envoyée.")
     return redirect("dashboard_drh")
@@ -668,8 +742,8 @@ def verifier_absence(request, absence_id):
     ValidationHistorique.objects.create(
         absence=absence,
         utilisateur=request.user,
-        action='verifie_par_drh',
-        commentaire="Vérifié par la DRH"
+        decision='verifie_par_drh',
+        motif="Vérifié par la DRH"
     )
     return redirect('dashboard_drh')
 
@@ -683,8 +757,8 @@ def rejeter_absence_drh(request, absence_id):
         ValidationHistorique.objects.create(
             absence=absence,
             utilisateur=request.user,
-            action="rejet",
-            commentaire=commentaire,
+            decision="rejet",
+            motif=commentaire,
         )
         messages.warning(request, "Absence rejetée.")
     return redirect("dashboard_drh")
@@ -811,29 +885,17 @@ def dashboard_dp(request):
 @login_required
 def valider_absence_dp(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
-    absence.statut = 'valide'
-    absence.save()
+
+    absence.valide_par_dp = True
+    absence.date_validation_dp = timezone.now()
+    absence.statut = 'valide_dp'
+    absence.save()  # déclenche la déduction de quota + historique dans model.save()
 
     ValidationHistorique.objects.create(
         absence=absence,
         utilisateur=request.user,
-        action='valide_par_dp',
-        commentaire="Validé par le Directeur Pays"
-    )
-    return redirect('dashboard_dp')
-
-
-@login_required
-def rejeter_absence_dp(request, absence_id):
-    absence = get_object_or_404(Absence, id=absence_id)
-    absence.statut = 'rejete'
-    absence.save()
-
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        action='rejete_par_dp',
-        commentaire="Rejeté par le Directeur Pays"
+        decision='valide_par_dp',
+        motif="Validé"
     )
     return redirect('dashboard_dp')
 
@@ -845,9 +907,9 @@ def exporter_absences_excel(request):
     type_id = request.GET.get('type')
 
     absences = Absence.objects.filter(
-        statut='verifie_rh',
-        date_debut__month=mois
-    )
+    statut='verifie_drh',
+    date_debut__month=mois
+)
     if type_id:
         absences = absences.filter(type_absence_id=type_id)
 
@@ -869,26 +931,6 @@ def exporter_absences_excel(request):
 
     return response
 
-
-@login_required
-def valider_absence_dp(request, absence_id):
-    absence = get_object_or_404(Absence, id=absence_id)
-
-    absence.valide_par_dp = True
-    absence.date_validation_dp = timezone.now()
-    absence.statut = 'valide_dp'
-    absence.save()  # déclenche la déduction de quota + historique dans model.save()
-
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        action='valide_par_dp',
-        commentaire="Validé définitivement par DP"
-    )
-    return redirect('dashboard_dp')
-
-
-
 @login_required
 def rejeter_absence_dp(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
@@ -898,8 +940,8 @@ def rejeter_absence_dp(request, absence_id):
     ValidationHistorique.objects.create(
         absence=absence,
         utilisateur=request.user,
-        action='rejete_par_dp',
-        commentaire="Rejeté par le DP"
+        decision='rejete_par_dp',
+        motif="Rejeté par le DP"
     )
     return redirect('dashboard_dp')
 
@@ -1088,3 +1130,109 @@ def supprimer_jour_ferie(request, jour_id):
     jf.delete()
     messages.success(request, "Jour férié supprimé.")
     return redirect('configuration_view')
+
+@login_required
+def soumettre_recuperation(request):
+    if request.method == 'POST':
+        motif = request.POST.get('motif')
+        date_debut = request.POST.get('date_debut')
+        nombre_jours = request.POST.get('nombre_jours')
+        justificatif = request.FILES.get('justificatif')
+
+        if not (motif and date_debut and nombre_jours and justificatif):
+            messages.error(request, "Tous les champs sont requis.")
+            return redirect('dashboard_collaborateur')  # ou page actuelle
+
+        try:
+            date_debut_obj = datetime.strptime(date_debut, "%Y-%m-%d").date()
+            nombre_jours_float = float(nombre_jours)
+        except ValueError:
+            messages.error(request, "Format de date ou nombre de jours invalide.")
+            return redirect('dashboard_collaborateur')
+
+        # Créer la récupération
+        Recuperation.objects.create(
+            utilisateur=request.user,  # <=== au lieu de collaborateur
+            motif=motif,
+            date_debut=date_debut_obj,
+            nombre_jours=nombre_jours_float,
+            justificatif=justificatif
+        )
+
+        messages.success(request, "Récupération soumise avec succès !")
+        return redirect('mes_absences')
+
+    return redirect('dashboard_collaborateur')
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Recuperation
+from datetime import timedelta
+from django.utils import timezone
+
+# -----------------------------
+# Modifier une récupération
+# -----------------------------
+@login_required
+def modifier_recuperation(request, recup_id):
+    recup = get_object_or_404(Recuperation, id=recup_id, utilisateur=request.user)
+
+    if recup.statut == 'valide':
+        messages.error(request, "Cette récupération est déjà validée et ne peut pas être modifiée.")
+        return redirect('mes_absences')
+
+    if request.method == 'POST':
+        date_debut = request.POST.get('date_debut')
+        nombre_jours = request.POST.get('nombre_jours')
+        motif = request.POST.get('motif')
+        justificatif = request.FILES.get('justificatif')
+      
+        if nombre_jours:
+            recup.nombre_jours = nombre_jours
+        if motif:
+            recup.motif = motif
+        if justificatif:
+            recup.justificatif = justificatif
+
+        # Calcul de date_fin pour affichage (similaire aux absences)
+        if date_debut:
+            recup.date_debut = datetime.strptime(date_debut, "%Y-%m-%d").date()
+        if nombre_jours:
+            recup.nombre_jours = float(nombre_jours)
+        # Calcul date_fin
+        recup.date_fin = recup.date_debut + timedelta(days=recup.nombre_jours - 1)
+
+        recup.save()
+        messages.success(request, "Récupération modifiée avec succès.")
+        return redirect('mes_absences')
+
+    return render(request, 'collaborateur/modifier_recuperation.html', {'recup': recup})
+
+
+# -----------------------------
+# Annuler une récupération
+# -----------------------------
+@login_required
+def annuler_recuperation(request, recup_id):
+    recup = get_object_or_404(Recuperation, id=recup_id, utilisateur=request.user)
+
+    if recup.statut == 'valide':
+        messages.error(request, "Cette récupération est déjà validée et ne peut pas être annulée.")
+        return redirect('mes_absences')
+
+    if request.method == 'POST':
+        motif = request.POST.get('motif')
+        if not motif:
+            messages.error(request, "Veuillez fournir un motif pour l'annulation.")
+            return redirect('mes_absences')
+
+        # On considère que la récupération est annulée
+        recup.statut = 'annulee'
+        recup.motif_annulation = motif
+        recup.save()
+        messages.success(request, "Récupération annulée avec succès.")
+        return redirect('mes_absences')
+
+    return render(request, 'collaborateur/annuler_recuperation.html', {'recup': recup})

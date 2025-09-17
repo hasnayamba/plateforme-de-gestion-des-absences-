@@ -6,15 +6,10 @@ from urllib.parse import urlparse
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- Clé secrète Django ---
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    # Pour les tests locaux uniquement (jamais en prod)
-    SECRET_KEY = "qhO106Ry4B"
-    
+SECRET_KEY = os.environ.get("SECRET_KEY", "qhO106Ry4B")  # Pour tests locaux uniquement
 
 # --- Mode DEBUG ---
-DEBUG = True  # ⚠️ Passe à False en production et utilise ALLOWED_HOSTS
-
+DEBUG = True  # ⚠️ Passe à False en production
 ALLOWED_HOSTS = ["gestionabsences.azurewebsites.net", "127.0.0.1", "localhost"]
 
 # --- Applications Django ---
@@ -27,7 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',
     'absences',
-    'storages'
+    'storages',  # pour Azure Storage
 ]
 
 MIDDLEWARE = [
@@ -42,6 +37,7 @@ MIDDLEWARE = [
 ]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
 ROOT_URLCONF = 'gestion_absencesApp.urls'
@@ -63,30 +59,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestion_absencesApp.wsgi.application'
 
-# Base de données PostgreSQL sur Azure
-from urllib.parse import urlparse
-import os
-
-connection_string = os.environ.get('AZURE_POSTGRESQL_CONNECTIONSTRING')
-if not connection_string:
-    raise RuntimeError("❌ La variable AZURE_POSTGRESQL_CONNECTIONSTRING n'est pas définie. Vérifie tes secrets GitHub ou la config Azure.")
-
-url = urlparse(connection_string)
-
-
+# --- Base de données PostgreSQL sur Azure ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'gestionabsencebd',  # retire le slash initial
+        'NAME': 'gestionabsencebd',
         'USER': 'adminazure',
         'PASSWORD': '94649092Hiy',
         'HOST': 'gestionabsencesapp-public.postgres.database.azure.com',
         'PORT': '5432',
     }
 }
-
-
-
 
 # --- Sécurité mot de passe ---
 AUTH_PASSWORD_VALIDATORS = [
@@ -103,17 +86,6 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# --- Fichiers statiques ---
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')                          # URL pour accéder aux fichiers
-
-# En production sur Azure App Service
-if os.environ.get('WEBSITE_SITE_NAME'):  # Vérifie si on est sur Azure
-    MEDIA_ROOT = r'D:\home\site\wwwroot\media'
-
 # --- Authentification / Redirection ---
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard_collaborateur'
@@ -122,13 +94,14 @@ LOGOUT_REDIRECT_URL = 'login'
 # --- Clé par défaut pour les modèles ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Azure Storage
+# --- Azure Blob Storage (fichiers médias) ---
 AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
-AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")  # ne jamais mettre la clé directement
-AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
-AZURE_OVERWRITE_FILES = False  # Empêche d’écraser un fichier existant
+AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")  
+AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER", "media")
+AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+AZURE_OVERWRITE_FILES = False
 
 DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
+MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
 
-
-
+# Note : MEDIA_ROOT n'est plus utilisé, tout passe par Azure Blob

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Mes demandes d’absence{% endblock %}
+{% block title %}Mes demandes{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-  <h3 class="mb-4">Mes demandes d’absence</h3>
+  <h3 class="mb-4">Mes demandes (absences et récupérations)</h3>
 
   <table class="table table-bordered table-hover">
     <thead class="table-light">
@@ -20,191 +20,128 @@
       </tr>
     </thead>
     <tbody>
-      {% for absence in absences %}
+      {% for demande in absences %}
       <tr>
-        <td>{{ absence.type_absence.nom|default:"Non défini" }}</td>
-        <td>{{ absence.date_debut|date:"d/m/Y" }}</td>
-        <td>{{ absence.date_fin|date:"d/m/Y" }}</td>
-        <td>{{ absence.nombre_jours|default:"-" }}</td>
-
         <td>
-          {% if absence.statut == 'en_attente' %}
-            <span class="badge bg-warning text-dark">En attente</span>
-          {% elif absence.statut == 'approuve_superieur' %}
-            <span class="badge bg-success">Approuvée par supérieur</span>
-          {% elif absence.statut == 'verifie_drh' %}
-            <span class="badge bg-info text-dark">Vérifiée DRH</span>
-          {% elif absence.statut == 'valide_dp' %}
-            <span class="badge bg-primary">Validée DP</span>
-          {% elif absence.statut == 'rejete' %}
-            <span class="badge bg-danger">Rejetée</span>
-          {% elif absence.statut == 'annulee' %}
-            <span class="badge bg-secondary">Annulée</span>
+          {% if demande.type_demande == "Recuperation" %}
+            <span class="badge bg-info text-dark">Récupération</span>
           {% else %}
-            <span class="badge bg-secondary">{{ absence.get_statut_display }}</span>
+            {{ demande.type_absence.nom|default:"Non défini" }}
           {% endif %}
         </td>
-
+        <td>{{ demande.date_debut|date:"d/m/Y" }}</td>
+        <td>{{ demande.date_fin|date:"d/m/Y" }}</td>
+        <td>{{ demande.nombre_jours|default:"-" }}</td>
         <td>
-          {% if absence.justificatif %}
-            <a href="{{ absence.justificatif.url }}" target="_blank">Voir</a>
+          {% if demande.type_demande == "Recuperation" %}
+            {% if demande.statut == 'en_attente' %}
+              <span class="badge bg-warning text-dark">En attente RH</span>
+            {% elif demande.statut == 'valide' %}
+              <span class="badge bg-success">Validée</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ demande.statut }}</span>
+            {% endif %}
+          {% else %}
+            {% if demande.statut == 'en_attente' %}
+              <span class="badge bg-warning text-dark">En attente</span>
+            {% elif demande.statut == 'approuve_superieur' %}
+              <span class="badge bg-success">Approuvée par supérieur</span>
+            {% elif demande.statut == 'verifie_drh' %}
+              <span class="badge bg-info text-dark">Vérifiée DRH</span>
+            {% elif demande.statut == 'valide_dp' %}
+              <span class="badge bg-primary">Validée DP</span>
+            {% elif demande.statut == 'rejete' %}
+              <span class="badge bg-danger">Rejetée</span>
+            {% elif demande.statut == 'annulee' %}
+              <span class="badge bg-secondary">Annulée</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ demande.get_statut_display }}</span>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td>
+          {% if demande.justificatif %}
+            <a href="{{ demande.justificatif.url }}" target="_blank">Voir / Télécharger</a>
           {% else %}
             Aucun
           {% endif %}
         </td>
-
         <td>
-          <!-- Historique -->
-          <button type="button" class="btn btn-sm btn-outline-primary"
-                  data-bs-toggle="modal" data-bs-target="#historiqueModal{{ absence.id }}">
-            Historique
-          </button>
+          {% if demande.type_demande == "Recuperation" %}
+            {% if demande.statut == 'en_attente' %}
+              <button type="button" class="btn btn-sm btn-warning"
+                      data-bs-toggle="modal" data-bs-target="#modifierRecupModal{{ demande.id }}">
+                Modifier
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#annulerRecupModal{{ demande.id }}">
+                Annuler
+              </button>
+            {% elif demande.statut == 'valide' %}
+              <span class="badge bg-success">Validée</span>
+            {% endif %}
+          {% else %}
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal" data-bs-target="#historiqueModal{{ demande.id }}">
+              Historique
+            </button>
 
-          {% if absence.statut == 'rejete' %}
-            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#motifRejetModal{{ absence.id }}">
-              Voir motif rejet
-            </button>
-          {% endif %}
+            {% if demande.statut == 'rejete' %}
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#motifRejetModal{{ demande.id }}">
+                Voir motif rejet
+              </button>
+            {% endif %}
 
-          {% if absence.annulee_par_collaborateur %}
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#motifAnnulationModal{{ absence.id }}">
-              Voir motif annulation
-            </button>
-          {% endif %}
+            {% if demande.annulee_par_collaborateur %}
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      data-bs-toggle="modal" data-bs-target="#motifAnnulationModal{{ demande.id }}">
+                Voir motif annulation
+              </button>
+            {% endif %}
 
-          {% if absence.statut in statuts_modifiables %}
-            <button type="button" class="btn btn-sm btn-info mb-1" data-bs-toggle="modal" data-bs-target="#modifierModal{{ absence.id }}">
-              Modifier
-            </button>
-            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#annulerModal{{ absence.id }}">
-              Annuler
-            </button>
+            {% if demande.statut in statuts_modifiables %}
+              <button type="button" class="btn btn-sm btn-warning"
+                      data-bs-toggle="modal" data-bs-target="#modifierModal{{ demande.id }}">
+                Modifier
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#annulerModal{{ demande.id }}">
+                Annuler
+              </button>
+            {% endif %}
           {% endif %}
         </td>
       </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-      {# MODALE HISTORIQUE VALIDATION #}
-      <div class="modal fade" id="historiqueModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Historique des validations</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              {% if absence.historiques.all %}
-                <table class="table table-sm table-bordered">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Date</th>
-                      <th>Décision</th>
-                      <th>Validé par</th>
-                      <th>Rôle</th>
-                      <th>Motif</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for h in absence.historiques.all %}
-                      <tr>
-                        <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
-                        <td>
-                          {% if h.decision == 'valider' %}
-                            <span class="badge bg-success">Validé</span>
-                          {% elif h.decision == 'rejeter' %}
-                            <span class="badge bg-danger">Rejeté</span>
-                          {% else %}
-                            {{ h.decision }}
-                          {% endif %}
-                        </td>
-                        <td>{{ h.utilisateur.get_full_name|default:"-" }}</td>
-                        <td>{{ h.role_valide|title }}</td>
-                        <td>{{ h.motif|default:"-" }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              {% else %}
-                <p>Aucun historique disponible.</p>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# MODALE MOTIF REJET #}
-      <div class="modal fade" id="motifRejetModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
+  {# ----------------- RENDER ALL MODALS OUTSIDE THE TABLE ----------------- #}
+  {% for demande in absences %}
+    {% if demande.type_demande == "Recuperation" %}
+      <!-- MODALE MODIFIER RECUPERATION -->
+      <div class="modal fade" id="modifierRecupModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Motif du rejet</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              {% if absence.dernier_motif_rejet %}
-                <p><strong>Date :</strong> {{ absence.date_rejet|date:"d/m/Y H:i" }}</p>
-                <p>{{ absence.dernier_motif_rejet }}</p>
-              {% else %}
-                <p>Aucun motif disponible.</p>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# MODALE MOTIF ANNULATION #}
-      <div class="modal fade" id="motifAnnulationModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Motif d’annulation</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              {{ absence.motif_annulation|default:"Aucun motif disponible." }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# MODALE MODIFIER ABSENCE #}
-      <div class="modal fade" id="modifierModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <form method="post" action="{% url 'modifier_absence' absence.id %}" enctype="multipart/form-data">
+          <form method="post" action="{% url 'modifier_recuperation' demande.id %}" enctype="multipart/form-data">
             {% csrf_token %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Modifier absence</h5>
+                <h5 class="modal-title">Modifier récupération</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
                 <div class="mb-3">
-                  <label class="form-label">Type d'absence</label>
-                  <select class="form-select" name="type_absence">
-                    {% for type in types_absence %}
-                      <option value="{{ type.id }}" {% if absence.type_absence and type.id == absence.type_absence.id %}selected{% endif %}>{{ type.nom }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="mb-3">
                   <label class="form-label">Date de début</label>
-                  <input type="date" name="date_debut" class="form-control" value="{{ absence.date_debut|date:'Y-m-d' }}">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Date de fin</label>
-                  <input type="date" name="date_fin" class="form-control" value="{{ absence.date_fin|date:'Y-m-d' }}">
+                  <input type="date" name="date_debut" class="form-control" value="{{ demande.date_debut|date:'Y-m-d' }}">
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Nombre de jours</label>
-                  <input type="number" step="0.5" name="nombre_jours" class="form-control" value="{{ absence.nombre_jours }}">
+                  <input type="number" step="0.5" name="nombre_jours" class="form-control" value="{{ demande.nombre_jours }}">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Raison</label>
-                  <textarea name="raison" class="form-control">{{ absence.raison }}</textarea>
+                  <label class="form-label">Motif</label>
+                  <textarea name="motif" class="form-control">{{ demande.motif }}</textarea>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Justificatif (facultatif)</label>
@@ -220,16 +157,165 @@
         </div>
       </div>
 
-      {# MODALE ANNULER ABSENCE #}
-      <div class="modal fade" id="annulerModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
+      <!-- MODALE ANNULER RECUPERATION -->
+      <div class="modal fade" id="annulerRecupModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-          <form method="post" action="{% url 'annuler_absence' absence.id %}">
+          <form method="post" action="{% url 'annuler_recuperation' demande.id %}">
             {% csrf_token %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Annuler la récupération</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Motif d’annulation</label>
+                  <textarea class="form-control" name="motif" rows="3" required></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-danger">Confirmer l’annulation</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    {% else %}
+      <!-- MODALE HISTORIQUE -->
+      <div class="modal fade" id="historiqueModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Historique des validations</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {% if demande.historiques.exists %}
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Date</th>
+                      <th>Décision</th>
+                      <th>Validé par</th>
+                      <th>Rôle</th>
+                      <th>Motif</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for h in demande.historiques.all %}
+                    <tr>
+                      <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
+                      <td>
+                        {% if h.decision == 'valider' %}
+                          <span class="badge bg-success">Validé</span>
+                        {% elif h.decision == 'rejeter' %}
+                          <span class="badge bg-danger">Rejeté</span>
+                        {% else %}
+                          {{ h.decision }}
+                        {% endif %}
+                      </td>
+                      <td>{{ h.utilisateur.get_full_name|default:"-" }}</td>
+                      <td>{{ h.role_valide|title }}</td>
+                      <td>{{ h.motif|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <p>Aucun historique disponible.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE MOTIF REJET -->
+      <div class="modal fade" id="motifRejetModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Motif du rejet</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {% if demande.dernier_motif_rejet %}
+                <p><strong>Date :</strong> {{ demande.date_rejet|date:"d/m/Y H:i" }}</p>
+                <p>{{ demande.dernier_motif_rejet }}</p>
+              {% else %}
+                <p>Aucun motif disponible.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE MOTIF ANNULATION -->
+      <div class="modal fade" id="motifAnnulationModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Motif d’annulation</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {{ demande.motif_annulation|default:"Aucun motif disponible." }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE MODIFIER ABSENCE -->
+      <div class="modal fade" id="modifierModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <form method="post" action="{% url 'modifier_absence' demande.id %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Modifier absence</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Type d'absence</label>
+                  <select class="form-select" name="type_absence">
+                    {% for type in types_absence %}
+                      <option value="{{ type.id }}" {% if demande.type_absence and type.id == demande.type_absence.id %}selected{% endif %}>{{ type.nom }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Date de début</label>
+                  <input type="date" name="date_debut" class="form-control" value="{{ demande.date_debut|date:'Y-m-d' }}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Nombre de jours</label>
+                  <input type="number" step="0.5" name="nombre_jours" class="form-control" value="{{ demande.nombre_jours }}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Raison</label>
+                  <textarea name="raison" class="form-control">{{ demande.raison }}</textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Justificatif (facultatif)</label>
+                  <input type="file" name="justificatif" class="form-control">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODALE ANNULER ABSENCE -->
+      <div class="modal fade" id="annulerModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <form method="post" action="{% url 'annuler_absence' demande.id %}">
+            {% csrf_token %}
             <div class="modal-content">
               <div class="modal-header">
                 <h5 class="modal-title">Annuler l’absence</h5>
@@ -249,43 +335,9 @@
           </form>
         </div>
       </div>
+    {% endif %}
+  {% endfor %}
+  {# ----------------- FIN MODALS ----------------- #}
 
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
 {% endblock %}
-
-{# Jours fériés en JSON sécurisé #}
-<script id="joursFeriesData" type="application/json">
-  {{ jours_feries|json_script:"joursFeriesData" }}
-</script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const joursFeries = JSON.parse(document.getElementById('joursFeriesData').textContent);
-
-    document.querySelectorAll('input[type="date"]').forEach(function (dateInput) {
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.setAttribute('min', today);
-
-      dateInput.addEventListener('input', function () {
-        const selectedDate = new Date(this.value);
-        const day = selectedDate.getDay();
-        const formattedDate = this.value;
-
-        if (day === 0 || day === 6) {
-          alert("Les weekends ne sont pas autorisés.");
-          this.value = '';
-          return;
-        }
-
-        if (joursFeries.includes(formattedDate)) {
-          alert("Ce jour est un jour férié.");
-          this.value = '';
-          return;
-        }
-      });
-    });
-  });
-</script>

@@ -5,6 +5,7 @@ from datetime import timedelta
 from .utils import est_jour_ouvre, compter_jours_ouvres
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from django.utils import timezone
 
 # -----------------------------
 # Constantes globales
@@ -114,8 +115,8 @@ class QuotaAbsence(models.Model):
 class ValidationHistorique(models.Model):
     absence = models.ForeignKey('Absence', on_delete=models.CASCADE, related_name='historiques')
     utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    role_valide = models.CharField(max_length=50,null=True)  # admin, drh, dp, superieur
-    decision = models.CharField(max_length=20,null=True, default=False)     # valider, rejeter
+    role_valide = models.CharField(max_length=255,null=True)  # admin, drh, dp, superieur
+    decision = models.CharField(max_length=255,null=True, blank=True, default='')     # valider, rejeter
     motif = models.TextField(blank=True, null=True)
     date_validation = models.DateTimeField(auto_now_add=True)
 
@@ -129,6 +130,7 @@ class ValidationHistorique(models.Model):
 # -----------------------------
 
 class Absence(models.Model):
+    STATUTS = STATUT_ABSENCE
     collaborateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='absences')
     type_absence = models.ForeignKey(TypeAbsence, on_delete=models.CASCADE)
     date_debut = models.DateField()
@@ -148,13 +150,12 @@ class Absence(models.Model):
     valide_par_dp = models.BooleanField(default=False)
     date_validation_dp = models.DateField(blank=True, null=True)
 
-    statut = models.CharField(max_length=30, choices=(
-        ('en_attente', 'En attente'),
-        ('approuve_superieur', 'Approuvé par supérieur'),
-        ('verifie_drh', 'Vérifié par DRH'),
-        ('valide_dp', 'Validé par DP'),
-        ('rejete', 'Rejeté'),
-    ), default='en_attente')
+    statut = models.CharField(
+        max_length=30,
+        choices=STATUT_ABSENCE,   # <-- utiliser la constante centrale
+        default='en_attente'
+    )
+    
 
     justificatif = models.FileField(upload_to='justificatifs/', blank=True, null=True)
     annulee_par_collaborateur = models.BooleanField(default=False)
@@ -251,7 +252,21 @@ class Recuperation(models.Model):
     utilisateur = models.ForeignKey(User, on_delete=models.CASCADE)
     motif = models.TextField()
     justificatif = models.FileField(upload_to='justificatifs_recuperations/')
+    date_debut = models.DateField(default=timezone.now)  # nouvelle colonne
+    nombre_jours = models.DecimalField(  # nouvelle colonne
+        max_digits=5,
+        decimal_places=1,
+        default=1,
+        help_text="Nombre total de jours de récupération (ex: 1, 1.5, 2)"
+    )
+    statut = models.CharField(max_length=30, default='en_attente')  # 'en_attente', 'valide', 'annulee'
+    motif_annulation = models.TextField(blank=True, null=True)
+    date_fin = models.DateField(blank=True, null=True)  # pour calculer la fin
+
     date_soumission = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Récupération - {self.utilisateur.get_full_name()} - {self.date_soumission.strftime('%d/%m/%Y')}"
+        return (
+            f"Récupération - {self.utilisateur.get_full_name()} "
+            f"du {self.date_debut} ({self.nombre_jours} jours)"
+        )

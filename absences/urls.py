@@ -23,7 +23,10 @@ urlpatterns = [
     path('mes-absences/', views.mes_absences, name='mes_absences'),
     path('calendrier/', views.calendrier_absences, name='calendrier_absences'), 
     path('mes-quotas/', views.mon_quota, name='mon_quota'),
-    path('soumettre-recuperation/', views.soumettre_recuperation, name='soumettre_recuperation'),
+    path('soumettre_recuperation/', views.soumettre_recuperation, name='soumettre_recuperation'),
+    path('recuperation/modifier/<int:recup_id>/', views.modifier_recuperation, name='modifier_recuperation'),
+    path('recuperation/annuler/<int:recup_id>/', views.annuler_recuperation, name='annuler_recuperation'),
+
 
 # -----------------------------#
 # Partie pour les superieurs   #
@@ -39,6 +42,9 @@ urlpatterns = [
     path('absence/<int:absence_id>/rejeter_drh/', views.rejeter_absence_drh, name='rejeter_absence_drh'),
     path('quotas/<int:quota_id>/mettre-a-jour/', views.mettre_a_jour_quota, name='mettre_a_jour_quota'),
     path('telecharger/<path:file_path>', views.telecharger_justificatif, name='telecharger'),
+    path("drh/absence/<int:absence_id>/modifier/", views.modifier_absence_drh, name="modifier_absence_drh"),
+     path('drh/recuperation/<int:recuperation_id>/valider/', views.valider_recuperation, name='valider_recuperation'),
+
 
 
 

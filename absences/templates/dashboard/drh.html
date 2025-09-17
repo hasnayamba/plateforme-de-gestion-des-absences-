@@ -55,16 +55,12 @@
                     <p><strong>Type :</strong> {{ absence.type_absence.nom }}</p>
                     <p><strong>Dates :</strong> {{ absence.date_debut }} → {{ absence.date_fin }}</p>
                     <p><strong>Jours demandés :</strong> {{ absence.nombre_jours }}</p>
-                   <p><strong>Quotas disponibles :</strong></p>
-                      <ul>
-                       {% with quota=absence.collaborateur.quotas.filter(type_absence=absence.type_absence, annee=absence.date_debut.year).first %}
-                        {% if quota %}
-                          <p><strong>Quota disponible :</strong> {{ quota.jours_disponibles }} jours</p>
-                        {% else %}
-                          <p class="text-danger"><em>Aucun quota défini pour ce type d’absence en {{ absence.date_debut.year }}</em></p>
-                        {% endif %}
-                      {% endwith %}
-                      </ul>
+                      {% if absence.quota_disponible %}
+                        <p> {{ absence.quota_disponible.jours_disponibles }} jours</p>
+                      {% else %}
+                        <p class="text-danger"><em>Aucun quota défini pour ce type d’absence en {{ absence.date_debut.year }}</em></p>
+                      {% endif %}
+
                   </div>
                   <div class="modal-footer">
                     <button type="submit" class="btn btn-success">✅ Vérifier</button>
@@ -78,7 +74,7 @@
           <!-- Modal Améliorer -->
           <div class="modal fade" id="modalAmeliorer{{ absence.id }}" tabindex="-1">
             <div class="modal-dialog">
-              <form method="post" action="{% url 'modifier_absence' absence.id %}">{% csrf_token %}
+              <form method="post" action="{% url 'modifier_absence_drh' absence.id %}">{% csrf_token %}
                 <div class="modal-content">
                   <div class="modal-header"><h5 class="modal-title">Suggestion de modification</h5></div>
                   <div class="modal-body">
@@ -93,6 +89,7 @@
               </form>
             </div>
           </div>
+
               <!-- Modal Rejet -->
         <div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
           <div class="modal-dialog">
@@ -207,12 +204,13 @@
         <tbody>
           {% for h in historiques %}
           <tr>
-            <td>{{ h.date_action|date:"d/m/Y H:i" }}</td>
+            <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
+
             <td>{{ h.absence.collaborateur.get_full_name }}</td>
             <td>{{ h.absence.type_absence.nom }}</td>
-            <td>{{ h.action }}</td>
+            <td>{{ h.decision|default:"—" }}</td>
             <td>{{ h.utilisateur.get_full_name }}</td>
-            <td>{{ h.commentaire|default:"—" }}</td>
+            <td>{{ h.motif|default:"—" }}</td>
           </tr>
           {% empty %}
           <tr><td colspan="6">Aucun historique enregistré.</td></tr>
@@ -286,43 +284,52 @@
       </table>
     </div>
     <!-- TAB : Récupérations -->
-    <div class="tab-pane fade" id="recups">
-      <h5>Demandes de récupération soumises</h5>
-      <table class="table table-bordered table-sm">
-        <thead class="table-light">
-          <tr>
-            <th>Collaborateur</th>
-            <th>Date de soumission</th>
-            <th>Motif</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in recuperations %}
-          <tr>
-            <td>{{ r.utilisateur.get_full_name }}</td>
-            <td>{{ r.date_soumission|date:"d/m/Y H:i" }}</td>
-            <td>{{ r.motif }}</td>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#recups">🔄 Récupérations</a></li>
 
-            <td>
-              <td>
-                {% if r.justificatif %}
-                 <!-- Lien pour télécharger -->
-                    <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-success">Télécharger</a>
+<div class="tab-pane fade" id="recups">
+  <h5>Récupérations soumises</h5>
+  <table class="table table-bordered table-sm">
+    <thead class="table-light">
+      <tr>
+        <th>Collaborateur</th>
+        <th>Date début</th>
+        <th>Jours</th>
+        <th>Motif</th>
+        <th>Justificatif</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in recuperations %}
+      <tr>
+        <td>{{ r.collaborateur.get_full_name }}</td>
+        <td>{{ r.date_debut|date:"d/m/Y" }}</td>
+        <td>{{ r.nombre_jours }}</td>
+        <td>{{ r.motif }}</td>
+        <td>
+         <td>
+        {% if r.justificatif %}
+          <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-sm btn-outline-primary">📂 Voir PDF</a>
+        {% endif %}
+        
+        {% if r.statut == 'en_attente' %}
+          <a href="{% url 'valider_recuperation' r.id %}" class="btn btn-sm btn-success">✅ Valider</a>
+        {% else %}
+          <span class="badge bg-success">Validée</span>
+        {% endif %}
+      </td>
 
-                {% else %}
-                  <span class="text-muted">Aucun fichier</span>
-                {% endif %}
-              </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="4">Aucune récupération soumise.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+        </td>
+        <td>{{ r.get_statut_display }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">Aucune récupération soumise.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-  </div> <!-- end .tab-content -->
+
 </div> <!-- end .container -->
 {% endblock %}
 
