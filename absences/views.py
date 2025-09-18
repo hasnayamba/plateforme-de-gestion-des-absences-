@@ -55,12 +55,18 @@ def accueil_public(request):
         "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ]
 
-    # Utilisateurs actifs
-    utilisateurs = User.objects.filter(profile__actif=True).distinct().order_by("last_name")
+    # On ne garde que les utilisateurs actifs ayant au moins :
+    # - une absence validée RH/DP, OU
+    # - une récupération (peu importe le statut)
+    utilisateurs = User.objects.filter(
+        profile__actif=True
+    ).filter(
+        Q(absences__statut__in=["verifie_drh", "valide_dp"]) | Q(recuperation__isnull=False)
+    ).distinct().order_by("last_name")
 
     lignes = []
     for user in utilisateurs:
-        # Absences validées RH ou DP
+        # Absences validées RH/DP
         absences = Absence.objects.filter(
             collaborateur=user,
             statut__in=["verifie_drh", "valide_dp"]
@@ -76,28 +82,27 @@ def accueil_public(request):
 
         # Ajouter les absences
         for absence in absences:
-            absence.obj_type = "Absence"   # ✅ Tag type
+            absence.obj_type = "Absence"
             mois = absence.date_debut.month - 1
             absences_par_mois[mois].append(absence)
             total_absences += absence.duree()
 
         # Ajouter les récupérations
         for recup in recups:
-            recup.obj_type = "Recuperation"  # ✅ Tag type
+            recup.obj_type = "Recuperation"
             mois = recup.date_debut.month - 1
             absences_par_mois[mois].append(recup)
 
         lignes.append({
             "user": user,
             "mois": absences_par_mois,
-            "total": total_absences,  # total des absences uniquement
+            "total": total_absences,  # On ne compte pas les récupérations dans le total
         })
 
     return render(request, "accueil.html", {
         "mois_noms": mois_noms,
         "lignes": lignes,
     })
-
 
 # -----------------------------
 # Login Avec des profiles
