@@ -119,9 +119,11 @@
     </div>
 
 <!-- Tableau Quotas -->
+<!-- Onglet Quotas Collaborateurs -->
 <div class="tab-pane fade" id="quotas">
   <h5>Quotas des collaborateurs</h5>
-  <table class="table table-bordered table-sm align-middle table-hover">
+
+  <table class="table table-bordered table-sm align-middle table-hover" id="tableQuotas">
     <thead class="table-light">
       <tr>
         <th>Collaborateur</th>
@@ -143,14 +145,16 @@
                 Modifier
               </button>
 
-              <!-- Modal spécifique pour ce quota -->
+              <!-- Modal spécifique -->
               <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
                 <div class="modal-dialog">
                   <form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">
                     {% csrf_token %}
                     <div class="modal-content">
                       <div class="modal-header">
-                        <h5 class="modal-title">Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})</h5>
+                        <h5 class="modal-title">
+                          Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                       </div>
                       <div class="modal-body">
@@ -185,7 +189,6 @@
     </tbody>
   </table>
 </div>
-
 
     <!-- TAB : Historique des validations -->
     <div class="tab-pane fade" id="historique">
@@ -271,7 +274,7 @@
         <tbody>
           {% for absence in absences %}
           <tr>
-            <td>{{ absence.utilisateur.get_full_name() }}</td>
+            <td>{{ absence.collaborateur.get_full_name }}</td>
             <td>{{ absence.type_absence.nom }}</td>
             <td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
             <td>{{ absence.get_statut_display }}</td>
@@ -301,7 +304,7 @@
     <tbody>
       {% for r in recuperations %}
       <tr>
-        <td>{{ r.collaborateur.get_full_name }}</td>
+        <td>{{ r.utilisateur.get_full_name }}</td>
         <td>{{ r.date_debut|date:"d/m/Y" }}</td>
         <td>{{ r.nombre_jours }}</td>
         <td>{{ r.motif }}</td>
@@ -339,7 +342,25 @@
     padding: 0.4em 0.6em;
     border-radius: 0.25rem;
   }
+<!-- DataTables CSS & JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
+<!-- Initialisation DataTable -->
+<script>
+$(document).ready(function() {
+  $('#tableQuotas').DataTable({
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+    },
+    pageLength: 10,      // 10 lignes par page
+    lengthMenu: [5, 10, 25, 50, 100], // choix du nombre de lignes
+    ordering: true       // tri activé
+  });
+});
+</script>
 
 
 

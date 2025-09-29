@@ -7,22 +7,14 @@
   <h2 class="mb-4">Gestion des utilisateurs</h2>
 
   <!-- Boutons d'action -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <!-- Bouton gauche -->
-    <a href="{% url 'dashboard_drh' %}" class="btn btn-secondary">
-      📊 Tableau de bord
-    </a>
-
-  <!-- Bouton droit -->
-  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-    ➕ Ajouter un utilisateur
-  </button>
-</div>
-
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'dashboard_drh' %}" class="btn btn-secondary">📊 Tableau de bord</a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">➕ Ajouter un utilisateur</button>
+  </div>
 
   <!-- Tableau des utilisateurs -->
   <div class="table-responsive rounded shadow-sm">
-    <table class="table table-striped table-hover align-middle mb-0">
+    <table class="table table-striped table-hover align-middle mb-0" id="tableUsers">
       <thead class="table-dark">
         <tr>
           <th>Nom</th>
@@ -42,7 +34,6 @@
           <td>{{ u.profile.get_role_display }}</td>
           <td>{{ u.profile.actif|yesno:"Oui,Non" }}</td>
           <td class="text-center">
-
             <!-- Info -->
             <button class="btn btn-sm btn-outline-info me-1 btn-info"
               data-user='{
@@ -56,10 +47,7 @@
                 "actif": "{{ u.profile.actif|yesno:"Oui,Non" }}",
                 "superieur": "{{ u.profile.superieur.get_full_name|default:"Aucun" }}"
               }'
-              data-bs-toggle="modal" data-bs-target="#userInfoModal"
-              title="Infos utilisateur">
-              ℹ️
-            </button>
+              data-bs-toggle="modal" data-bs-target="#userInfoModal" title="Infos utilisateur">ℹ️</button>
 
             <!-- Modifier -->
             <button class="btn btn-sm btn-outline-warning me-1 btn-edit"
@@ -73,17 +61,11 @@
                 "superieur": "{{ u.profile.superieur.id|default:'' }}",
                 "actif": "{{ u.profile.actif }}"
               }'
-              data-bs-toggle="modal" data-bs-target="#editUserModal"
-              title="Modifier">
-              ✏️
-            </button>
+              data-bs-toggle="modal" data-bs-target="#editUserModal" title="Modifier">✏️</button>
 
             <!-- Supprimer -->
             <button class="btn btn-sm btn-outline-danger" 
-              onclick="openDeleteModal({{ u.id }}, '{{ u.get_full_name }}')"
-              title="Supprimer">
-              🗑️
-            </button>
+              onclick="openDeleteModal({{ u.id }}, '{{ u.get_full_name }}')" title="Supprimer">🗑️</button>
           </td>
         </tr>
         {% endfor %}
@@ -93,6 +75,7 @@
 </div>
 
 <!-- Modales -->
+
 <!-- ✅ Modal Ajouter Utilisateur -->
 <div class="modal fade" id="addUserModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -104,12 +87,58 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body row g-3">
-        {% include 'admin/user_form_fields.html' with is_edit=False %}
+        <!-- Champs formulaire -->
+        <div class="col-md-6">
+          <label>Nom</label>
+          <input type="text" name="last_name" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Prénom</label>
+          <input type="text" name="first_name" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Email</label>
+          <input type="email" name="email" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Nom d'utilisateur</label>
+          <input type="text" name="username" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Rôle</label>
+          <select name="role" class="form-select" required>
+            {% for key, val in roles.items %}
+              <option value="{{ key }}">{{ val }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label>Supérieur hiérarchique</label>
+          <select name="superieur" class="form-select">
+            <option value="">Aucun</option>
+            {% for s in supérieurs %}
+              <option value="{{ s.id }}">{{ s.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label>Poste</label>
+          <input type="text" name="poste" class="form-control">
+        </div>
+        <div class="col-md-6 d-flex align-items-center">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" name="actif" checked>
+            <label class="form-check-label">Actif</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
       </div>
     </form>
   </div>
 </div>
-
 
 <!-- ✏️ Modal Modifier Utilisateur -->
 <div class="modal fade" id="editUserModal" tabindex="-1">
@@ -123,7 +152,53 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body row g-3">
-        {% include 'admin/user_form_fields.html' with is_edit=True %}
+        <div class="col-md-6">
+          <label>Nom</label>
+          <input type="text" id="edit_nom" name="last_name" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Prénom</label>
+          <input type="text" id="edit_prenom" name="first_name" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Email</label>
+          <input type="email" id="edit_email" name="email" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Nom d'utilisateur</label>
+          <input type="text" id="edit_username" name="username" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label>Rôle</label>
+          <select id="edit_role" name="role" class="form-select" required>
+            {% for key, val in roles.items %}
+              <option value="{{ key }}">{{ val }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label>Supérieur hiérarchique</label>
+          <select id="edit_superieur" name="superieur" class="form-select">
+            <option value="">Aucun</option>
+            {% for s in supérieurs %}
+              <option value="{{ s.id }}">{{ s.get_full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label>Poste</label>
+          <input type="text" id="edit_poste" name="poste" class="form-control">
+        </div>
+        <div class="col-md-6 d-flex align-items-center">
+          <div class="form-check mt-4">
+            <input id="edit_actif" class="form-check-input" type="checkbox" name="actif">
+            <label class="form-check-label">Actif</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-warning">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
       </div>
     </form>
   </div>
@@ -175,41 +250,55 @@
   </div>
 </div>
 
+<!-- DataTables CSS & JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- JS pour les modales -->
 <script>
-  document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const user = JSON.parse(btn.getAttribute('data-user'));
-      document.getElementById('edit_user_id').value = user.id;
-      document.getElementById('edit_nom').value = user.nom;
-      document.getElementById('edit_prenom').value = user.prenom;
-      document.getElementById('edit_email').value = user.email;
-      document.getElementById('edit_username').value = user.username;
-      document.getElementById('edit_role').value = user.role;
-      document.getElementById('edit_superieur').value = user.superieur;
-      document.getElementById('edit_actif').checked = user.actif === "True";
-    });
+$(document).ready(function() {
+  $('#tableUsers').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' },
+    pageLength: 10,
+    lengthMenu: [5, 10, 25, 50, 100],
+    ordering: true
   });
+});
 
-  function openDeleteModal(id, name) {
-    document.getElementById('delete_user_id').value = id;
-    document.getElementById('delete_user_name').textContent = name;
-    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
-  }
-
-  document.querySelectorAll('.btn-info').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const user = JSON.parse(btn.getAttribute('data-user'));
-      document.getElementById('info_nom').textContent = user.nom;
-      document.getElementById('info_prenom').textContent = user.prenom;
-      document.getElementById('info_email').textContent = user.email;
-      document.getElementById('info_username').textContent = user.username;
-      document.getElementById('info_poste').textContent = user.poste || 'Non précisé';
-      document.getElementById('info_role').textContent = user.role;
-      document.getElementById('info_actif').textContent = user.actif;
-      document.getElementById('info_superieur').textContent = user.superieur;
-    });
+// Modales : Edit / Delete / Info
+document.querySelectorAll('.btn-edit').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const user = JSON.parse(btn.getAttribute('data-user'));
+    document.getElementById('edit_user_id').value = user.id;
+    document.getElementById('edit_nom').value = user.nom;
+    document.getElementById('edit_prenom').value = user.prenom;
+    document.getElementById('edit_email').value = user.email;
+    document.getElementById('edit_username').value = user.username;
+    document.getElementById('edit_role').value = user.role;
+    document.getElementById('edit_superieur').value = user.superieur;
+    document.getElementById('edit_actif').checked = user.actif === "True";
   });
+});
+
+function openDeleteModal(id, name) {
+  document.getElementById('delete_user_id').value = id;
+  document.getElementById('delete_user_name').textContent = name;
+  new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+
+document.querySelectorAll('.btn-info').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const user = JSON.parse(btn.getAttribute('data-user'));
+    document.getElementById('info_nom').textContent = user.nom;
+    document.getElementById('info_prenom').textContent = user.prenom;
+    document.getElementById('info_email').textContent = user.email;
+    document.getElementById('info_username').textContent = user.username;
+    document.getElementById('info_poste').textContent = user.poste || 'Non précisé';
+    document.getElementById('info_role').textContent = user.role;
+    document.getElementById('info_actif').textContent = user.actif;
+    document.getElementById('info_superieur').textContent = user.superieur;
+  });
+});
 </script>
 {% endblock %}
