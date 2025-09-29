@@ -271,7 +271,7 @@
         <tbody>
           {% for absence in absences %}
           <tr>
-            <td>{{ absence.collaborateur.get_full_name }}</td>
+            <td>{{ absence.utilisateur.get_full_name() }}</td>
             <td>{{ absence.type_absence.nom }}</td>
             <td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
             <td>{{ absence.get_statut_display }}</td>
