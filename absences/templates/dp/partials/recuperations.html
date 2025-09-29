@@ -1,0 +1,43 @@
+<h5>♻️ Récupérations en attente</h5>
+<table class="table table-sm table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Collaborateur</th>
+      <th>Motif</th>
+      <th>Date soumission</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rec in recuperations_attente %}
+    <tr>
+      <td>{{ rec.utilisateur.get_full_name }}</td>
+      <td>{{ rec.motif }}</td>
+      <td>{{ rec.date_soumission|date:"d/m/Y H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" class="text-center">Aucune récupération en attente</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h5 class="mt-4">✅ Récupérations vérifiées par la RH</h5>
+<table class="table table-sm table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Collaborateur</th>
+      <th>Motif</th>
+      <th>Date soumission</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rec in recuperations_verifiees %}
+    <tr>
+      <td>{{ rec.utilisateur.get_full_name }}</td>
+      <td>{{ rec.motif }}</td>
+      <td>{{ rec.date_soumission|date:"d/m/Y H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" class="text-center">Aucune récupération vérifiée</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
