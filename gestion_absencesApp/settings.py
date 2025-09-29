@@ -99,9 +99,9 @@ AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
 AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")  
 AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER", "media")
 AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
-AZURE_OVERWRITE_FILES = False
 
 DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
 MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
+
 
 # Note : MEDIA_ROOT n'est plus utilisé, tout passe par Azure Blob

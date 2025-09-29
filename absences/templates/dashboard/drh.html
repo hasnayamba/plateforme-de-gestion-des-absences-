@@ -1,16 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Tableau de bord - RH{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
   <h2 class="mb-4">Tableau de bord - Ressources Humaines</h2>
   
-    <a href="{% url 'configuration_view' %}" class="btn btn-outline-info">⚙️ Configuration</a>
-   <a href="{% url 'admin_users' %}" class="btn btn-outline-primary"> 👥 Gérer les utilisateurs </a>
-       <br>
-       <br>
-       <br>
+  <a href="{% url 'configuration_view' %}" class="btn btn-outline-info">⚙️ Configuration</a>
+  <a href="{% url 'admin_users' %}" class="btn btn-outline-primary">👥 Gérer les utilisateurs</a>
+  <br><br><br>
 
   <ul class="nav nav-tabs" id="drhTabs" role="tablist">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#demandes">📥 Demandes à vérifier</a></li>
@@ -21,10 +20,10 @@
   </ul>
 
   <div class="tab-content mt-3">
-    <!-- TAB : Demandes -->
+    <!-- TAB : Demandes à vérifier -->
     <div class="tab-pane fade show active" id="demandes">
       <h5>Demandes à vérifier</h5>
-      <table class="table table-sm table-bordered">
+      <table class="table table-sm table-bordered table-hover">
         <thead class="table-light">
           <tr>
             <th>Nom</th><th>Type</th><th>Dates</th><th>Jours</th><th>Justificatif</th><th>Actions</th>
@@ -44,151 +43,44 @@
               <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalRejeter{{ absence.id }}">Rejeter</button>
             </td>
           </tr>
-
-          <!-- Modal Vérifier -->
-          <div class="modal fade" id="modalVerifier{{ absence.id }}" tabindex="-1">
-            <div class="modal-dialog">
-              <form method="post" action="{% url 'verifier_absence' absence.id %}">{% csrf_token %}
-                <div class="modal-content">
-                  <div class="modal-header"><h5 class="modal-title">Vérification d’absence</h5></div>
-                  <div class="modal-body">
-                    <p><strong>Type :</strong> {{ absence.type_absence.nom }}</p>
-                    <p><strong>Dates :</strong> {{ absence.date_debut }} → {{ absence.date_fin }}</p>
-                    <p><strong>Jours demandés :</strong> {{ absence.nombre_jours }}</p>
-                      {% if absence.quota_disponible %}
-                        <p> {{ absence.quota_disponible.jours_disponibles }} jours</p>
-                      {% else %}
-                        <p class="text-danger"><em>Aucun quota défini pour ce type d’absence en {{ absence.date_debut.year }}</em></p>
-                      {% endif %}
-
-                  </div>
-                  <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">✅ Vérifier</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <!-- Modal Améliorer -->
-          <div class="modal fade" id="modalAmeliorer{{ absence.id }}" tabindex="-1">
-            <div class="modal-dialog">
-              <form method="post" action="{% url 'modifier_absence_drh' absence.id %}">{% csrf_token %}
-                <div class="modal-content">
-                  <div class="modal-header"><h5 class="modal-title">Suggestion de modification</h5></div>
-                  <div class="modal-body">
-                    <label>Message :</label>
-                    <textarea name="commentaire" class="form-control" required></textarea>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="submit" class="btn btn-warning">Envoyer</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-
-              <!-- Modal Rejet -->
-        <div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
-          <div class="modal-dialog">
-            <form method="post" action="{% url 'rejeter_absence_drh' absence.id %}">
-              {% csrf_token %}
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title">Motif de rejet</h5>
-                </div>
-                <div class="modal-body">
-                  <label>Message :</label>
-                  <textarea name="commentaire" class="form-control" required></textarea>
-                </div>
-                <div class="modal-footer">
-                  <button type="submit" class="btn btn-danger">Rejeter</button>
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-<!-- Tableau Quotas -->
-<!-- Onglet Quotas Collaborateurs -->
-<div class="tab-pane fade" id="quotas">
-  <h5>Quotas des collaborateurs</h5>
-
-  <table class="table table-bordered table-sm align-middle table-hover" id="tableQuotas">
-    <thead class="table-light">
-      <tr>
-        <th>Collaborateur</th>
-        {% for type in types %}
-          <th>{{ type.nom }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>
-        <td>{{ row.user.get_full_name }}</td>
-        {% for cell in row.cells %}
-          {% if cell.quota %}
-            <td>
-              {{ cell.jours }}
-              <!-- Bouton pour ouvrir modal spécifique -->
-              <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quotaModal{{ cell.quota.id }}">
-                Modifier
-              </button>
-
-              <!-- Modal spécifique -->
-              <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
-                <div class="modal-dialog">
-                  <form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">
-                    {% csrf_token %}
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">
-                          Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                      </div>
-                      <div class="modal-body">
-                        <p>Quota actuel : <strong>{{ cell.jours }}</strong> jours</p>
-                        <div class="mb-2">
-                          <label>Nombre de jours :</label>
-                          <input type="number" step="0.1" min="0" name="jours" class="form-control" required>
-                        </div>
-                        <div class="mb-2">
-                          <label>Action :</label>
-                          <select name="operation" class="form-select" required>
-                            <option value="ajouter">Ajouter</option>
-                            <option value="reduire">Réduire</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Enregistrer</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </td>
-          {% else %}
-            <td class="text-muted">-</td>
-          {% endif %}
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+    <!-- TAB : Quotas collaborateurs -->
+    <div class="tab-pane fade" id="quotas">
+      <h5>Quotas des collaborateurs</h5>
+      <table class="table table-bordered table-sm align-middle table-hover" id="tableQuotas">
+        <thead class="table-light">
+          <tr>
+            <th>Collaborateur</th>
+            {% for type in types %}
+              <th>{{ type.nom }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.user.get_full_name }}</td>
+            {% for cell in row.cells %}
+              {% if cell.quota %}
+              <td>
+                {{ cell.jours }}
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quotaModal{{ cell.quota.id }}">
+                  Modifier
+                </button>
+              </td>
+              {% else %}
+              <td class="text-muted">-</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
     <!-- TAB : Historique des validations -->
     <div class="tab-pane fade" id="historique">
@@ -208,7 +100,6 @@
           {% for h in historiques %}
           <tr>
             <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
-
             <td>{{ h.absence.collaborateur.get_full_name }}</td>
             <td>{{ h.absence.type_absence.nom }}</td>
             <td>{{ h.decision|default:"—" }}</td>
@@ -231,7 +122,7 @@
           <select name="mois" class="form-select">
             <option value="">Tous</option>
             {% for i, nom in mois_list %}
-            <option value="{{ i }}" {% if mois_selectionne == i %}selected{% endif %}>{{ nom }}</option>
+              <option value="{{ i }}" {% if mois_selectionne == i %}selected{% endif %}>{{ nom }}</option>
             {% endfor %}
           </select>
         </div>
@@ -240,7 +131,7 @@
           <select name="type" class="form-select">
             <option value="">Tous</option>
             {% for type in types %}
-            <option value="{{ type.id }}" {% if type.id == type_selectionne %}selected{% endif %}>{{ type.nom }}</option>
+              <option value="{{ type.id }}" {% if type.id == type_selectionne %}selected{% endif %}>{{ type.nom }}</option>
             {% endfor %}
           </select>
         </div>
@@ -249,15 +140,14 @@
           <select name="statut" class="form-select">
             <option value="">Tous</option>
             {% for key, val in absence_statuts %}
-            <option value="{{ key }}" {% if statut_selectionne == key %}selected{% endif %}>{{ val }}</option>
+              <option value="{{ key }}" {% if statut_selectionne == key %}selected{% endif %}>{{ val }}</option>
             {% endfor %}
           </select>
         </div>
-       <div class="col-md-4 align-self-end d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Filtrer</button>
-        <a href="{% url 'dashboard_drh' %}" class="btn btn-outline-secondary" title="Réinitialiser les filtres">❌</a>
-      </div>
-
+        <div class="col-md-4 align-self-end d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Filtrer</button>
+          <a href="{% url 'dashboard_drh' %}" class="btn btn-outline-secondary" title="Réinitialiser les filtres">❌</a>
+        </div>
       </form>
 
       <table class="table table-bordered table-hover table-sm" id="tableFiltres">
@@ -286,76 +176,170 @@
         </tbody>
       </table>
     </div>
-    <!-- TAB : Récupérations -->
 
-<div class="tab-pane fade" id="recups">
-  <h5>Récupérations soumises</h5>
-  <table class="table table-bordered table-sm">
-    <thead class="table-light">
-      <tr>
-        <th>Collaborateur</th>
-        <th>Date début</th>
-        <th>Jours</th>
-        <th>Motif</th>
-        <th>Justificatif</th>
-        <th>Statut</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in recuperations %}
-      <tr>
-        <td>{{ r.utilisateur.get_full_name }}</td>
-        <td>{{ r.date_debut|date:"d/m/Y" }}</td>
-        <td>{{ r.nombre_jours }}</td>
-        <td>{{ r.motif }}</td>
-        <td>
-         <td>
-        {% if r.justificatif %}
-          <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-sm btn-outline-primary">📂 Voir PDF</a>
-        {% endif %}
-        
-        {% if r.statut == 'en_attente' %}
-          <a href="{% url 'valider_recuperation' r.id %}" class="btn btn-sm btn-success">✅ Valider</a>
-        {% else %}
-          <span class="badge bg-success">Validée</span>
-        {% endif %}
-      </td>
+    <!-- TAB : Récupérations soumises -->
+    <div class="tab-pane fade" id="recups">
+      <h5>Récupérations soumises</h5>
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr>
+            <th>Collaborateur</th>
+            <th>Date début</th>
+            <th>Jours</th>
+            <th>Motif</th>
+            <th>Justificatif</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recuperations %}
+          <tr>
+            <td>{{ r.utilisateur.get_full_name }}</td>
+            <td>{{ r.date_debut|date:"d/m/Y" }}</td>
+            <td>{{ r.nombre_jours }}</td>
+            <td>{{ r.motif }}</td>
+            <td>
+              {% if r.justificatif %}
+                <a href="{{ r.justificatif.url }}" target="_blank" class="btn btn-sm btn-outline-primary">📂 Voir PDF</a>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.statut == 'en_attente' %}
+                <a href="{% url 'valider_recuperation' r.id %}" class="btn btn-sm btn-success">✅ Valider</a>
+              {% else %}
+                <span class="badge bg-success">Validée</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">Aucune récupération soumise.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div> <!-- end container -->
 
-        </td>
-        <td>{{ r.get_statut_display }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6">Aucune récupération soumise.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<!-- ================== MODALS ================== -->
 
+<!-- Modals pour vérification, amélioration, rejet des demandes -->
+{% for absence in absences_a_verifier %}
+  <!-- Modal Vérifier -->
+  <div class="modal fade" id="modalVerifier{{ absence.id }}" tabindex="-1">
+    <div class="modal-dialog">
+      <form method="post" action="{% url 'verifier_absence' absence.id %}">{% csrf_token %}
+        <div class="modal-content">
+          <div class="modal-header"><h5 class="modal-title">Vérification d’absence</h5></div>
+          <div class="modal-body">
+            <p><strong>Type :</strong> {{ absence.type_absence.nom }}</p>
+            <p><strong>Dates :</strong> {{ absence.date_debut }} → {{ absence.date_fin }}</p>
+            <p><strong>Jours demandés :</strong> {{ absence.nombre_jours }}</p>
+            {% if absence.quota_disponible %}
+              <p>Quota disponible : {{ absence.quota_disponible.jours_disponibles }} jours</p>
+            {% else %}
+              <p class="text-danger"><em>Aucun quota défini pour ce type d’absence en {{ absence.date_debut.year }}</em></p>
+            {% endif %}
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">✅ Vérifier</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 
-</div> <!-- end .container -->
-{% endblock %}
+  <!-- Modal Améliorer -->
+  <div class="modal fade" id="modalAmeliorer{{ absence.id }}" tabindex="-1">
+    <div class="modal-dialog">
+      <form method="post" action="{% url 'modifier_absence_drh' absence.id %}">{% csrf_token %}
+        <div class="modal-content">
+          <div class="modal-header"><h5 class="modal-title">Suggestion de modification</h5></div>
+          <div class="modal-body">
+            <label>Message :</label>
+            <textarea name="commentaire" class="form-control" required></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-warning">Envoyer</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 
+  <!-- Modal Rejeter -->
+  <div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
+    <div class="modal-dialog">
+      <form method="post" action="{% url 'rejeter_absence_drh' absence.id %}">{% csrf_token %}
+        <div class="modal-content">
+          <div class="modal-header"><h5 class="modal-title">Motif de rejet</h5></div>
+          <div class="modal-body">
+            <label>Message :</label>
+            <textarea name="commentaire" class="form-control" required></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-danger">Rejeter</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endfor %}
 
-<!-- DataTables CSS & JS -->
+<!-- Modals pour chaque quota (hors table) -->
+{% for row in rows %}
+  {% for cell in row.cells %}
+    {% if cell.quota %}
+      <div class="modal fade" id="quotaModal{{ cell.quota.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <form method="post" action="{% url 'mettre_a_jour_quota' cell.quota.id %}">{% csrf_token %}
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Modifier quota - {{ row.user.get_full_name }} ({{ cell.quota.type_absence.nom }})</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <p>Quota actuel : <strong>{{ cell.jours }}</strong> jours</p>
+                <div class="mb-2">
+                  <label>Nombre de jours :</label>
+                  <input type="number" step="0.1" min="0" name="jours" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                  <label>Action :</label>
+                  <select name="operation" class="form-select" required>
+                    <option value="ajouter">Ajouter</option>
+                    <option value="reduire">Réduire</option>
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
+<!-- ================== DataTables ================== -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Initialisation DataTable -->
 <script>
 $(document).ready(function() {
   $('#tableQuotas').DataTable({
-    language: {
-      url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
-    },
-    pageLength: 10,      // 10 lignes par page
-    lengthMenu: [5, 10, 25, 50, 100], // choix du nombre de lignes
-    ordering: true       // tri activé
+    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' },
+    pageLength: 10,
+    lengthMenu: [5, 10, 25, 50, 100],
+    ordering: true
   });
 });
 </script>
-
-
-
-
+{% endblock %}

@@ -869,6 +869,10 @@ def dashboard_dp(request):
     ).order_by('date_debut')
 
     absences_validees = Absence.objects.filter(statut='valide_dp').order_by('date_debut')
+    # --- Récupérations ---
+    recuperations_attente = Recuperation.objects.filter(statut='en_attente').order_by('-date_soumission')
+    recuperations_verifiees = Recuperation.objects.filter(statut='verifie_rh').order_by('-date_soumission')
+
 
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
@@ -879,6 +883,8 @@ def dashboard_dp(request):
         'absences_validees': absences_validees,
         'mois_list': mois_list,
         'mois_selectionne': mois_selectionne,
+        'recuperations_attente': recuperations_attente,
+        'recuperations_verifiees': recuperations_verifiees,
         'types': types,
         'type_selectionne': int(type_id) if type_id else None,
         'absences' : absences_a_valider,
