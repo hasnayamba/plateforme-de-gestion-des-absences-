@@ -869,9 +869,11 @@ def dashboard_dp(request):
     ).order_by('date_debut')
 
     absences_validees = Absence.objects.filter(statut='valide_dp').order_by('date_debut')
-    # --- Récupérations ---
+    # --- Récupérations --- #
+     
     recuperations_attente = Recuperation.objects.filter(statut='en_attente').order_by('-date_soumission')
-    recuperations_verifiees = Recuperation.objects.filter(statut='verifie_rh').order_by('-date_soumission')
+    recuperations_verifiees = Recuperation.objects.filter(statut='valide').order_by('-date_soumission')
+
 
 
     types = TypeAbsence.objects.all()
