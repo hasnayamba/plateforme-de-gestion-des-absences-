@@ -43,12 +43,9 @@
                                     {% if absences_mois %}
                                         {% for item in absences_mois %}
                                             <div class="mb-1">
-                                                {# Cas 1 : Absence #}
                                                 {% if item.obj_type == "Absence" %}
                                                     {% if item.statut == "verifie_drh" %}
-                                                        <span class="badge bg-warning text-dark" title="Absence validée RH">
-                                                            RH
-                                                        </span>
+                                                        <span class="badge bg-warning text-dark" title="Absence validée RH">RH</span>
                                                     {% elif item.statut == "valide_dp" %}
                                                         <span class="badge"
                                                               style="background-color: {{ item.type_absence.couleur }}; font-size: 0.9em;"
@@ -56,20 +53,15 @@
                                                             {{ item.type_absence.nom|slice:":10"|upper }}
                                                         </span>
                                                     {% endif %}
-                                                {# Cas 2 : Récupération #}
                                                 {% elif item.obj_type == "Recuperation" %}
                                                     {% if item.statut == "attente" %}
-                                                        <span class="badge bg-info text-dark" title="Récupération en attente">
-                                                            REC ATT
-                                                        </span>
+                                                        <span class="badge bg-info text-dark" title="Récupération en attente">REC ATT</span>
                                                     {% elif item.statut == "valide" %}
-                                                        <span class="badge bg-success" title="Récupération validée">
-                                                            REC
-                                                        </span>
+                                                        <span class="badge bg-success" title="Récupération validée">REC</span>
                                                     {% endif %}
                                                 {% endif %}
                                                 <br>
-                                                <small>{{ item.date_debut|date:"M d" }} → {{ item.date_fin|date:"M d" }}</small>
+                                                <small>{{ item.date_debut|date:"d/m" }} → {{ item.date_fin|date:"d/m" }}</small>
                                             </div>
                                         {% endfor %}
                                     {% else %}

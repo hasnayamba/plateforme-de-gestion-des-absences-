@@ -55,9 +55,7 @@ def accueil_public(request):
         "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ]
 
-    # On ne garde que les utilisateurs actifs ayant au moins :
-    # - une absence validée RH/DP, OU
-    # - une récupération (peu importe le statut)
+    # On ne garde que les utilisateurs actifs ayant au moins une absence ou une récupération
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
@@ -72,7 +70,7 @@ def accueil_public(request):
             statut__in=["verifie_drh", "valide_dp"]
         ).order_by("date_debut")
 
-        # Récupérations (tous statuts)
+        # Récupérations
         recups = Recuperation.objects.filter(
             utilisateur=user
         ).order_by("date_debut")
@@ -87,9 +85,14 @@ def accueil_public(request):
             absences_par_mois[mois].append(absence)
             total_absences += absence.duree()
 
-        # Ajouter les récupérations
+        # Ajouter les récupérations avec calcul de date de fin (temporaire)
         for recup in recups:
             recup.obj_type = "Recuperation"
+            # Calcul dynamique de la date de fin sans toucher au modèle
+            try:
+                recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
+            except Exception:
+                recup.date_fin = recup.date_debut
             mois = recup.date_debut.month - 1
             absences_par_mois[mois].append(recup)
 
@@ -103,7 +106,6 @@ def accueil_public(request):
         "mois_noms": mois_noms,
         "lignes": lignes,
     })
-
 # -----------------------------
 # Login Avec des profiles
 # -----------------------------
