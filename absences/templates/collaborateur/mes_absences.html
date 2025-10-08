@@ -157,30 +157,31 @@
         </div>
       </div>
 
-      <!-- MODALE ANNULER RECUPERATION -->
-      <div class="modal fade" id="annulerRecupModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <form method="post" action="{% url 'annuler_recuperation' demande.id %}">
-            {% csrf_token %}
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Annuler la récupération</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label">Motif d’annulation</label>
-                  <textarea class="form-control" name="motif" rows="3" required></textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="btn btn-danger">Confirmer l’annulation</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-              </div>
-            </div>
-          </form>
+<!-- MODALE ANNULER RECUPERATION -->
+<div class="modal fade" id="annulerRecupModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'annuler_recuperation' demande.id %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Annuler la récupération</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Motif d’annulation</label>
+            <textarea class="form-control" name="motif_annulation" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Confirmer</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
         </div>
       </div>
+    </form>
+  </div>
+</div>
+
 
     {% else %}
       <!-- MODALE HISTORIQUE -->
@@ -311,30 +312,31 @@
         </div>
       </div>
 
-      <!-- MODALE ANNULER ABSENCE -->
-      <div class="modal fade" id="annulerModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <form method="post" action="{% url 'annuler_absence' demande.id %}">
-            {% csrf_token %}
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Annuler l’absence</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <div class="mb-3">
-                  <label class="form-label">Motif d’annulation</label>
-                  <textarea class="form-control" name="motif" rows="3" required></textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="btn btn-danger">Confirmer l’annulation</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-              </div>
-            </div>
-          </form>
+<!-- MODALE ANNULER ABSENCE -->
+<div class="modal fade" id="annulerModal{{ demande.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'annuler_absence' demande.id %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Annuler l’absence</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Motif d’annulation</label>
+            <textarea class="form-control" name="motif_annulation" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Confirmer</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
         </div>
       </div>
+    </form>
+  </div>
+</div>
+
     {% endif %}
   {% endfor %}
   {# ----------------- FIN MODALS ----------------- #}

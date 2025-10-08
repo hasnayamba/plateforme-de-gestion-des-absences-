@@ -42,10 +42,16 @@
                 "prenom": "{{ u.first_name }}",
                 "email": "{{ u.email }}",
                 "username": "{{ u.username }}",
-                "poste": "{{ u.profile.poste }}",
+                "poste": "{{ u.profile.poste|default:'' }}",
                 "role": "{{ u.profile.get_role_display }}",
-                "actif": "{{ u.profile.actif|yesno:"Oui,Non" }}",
-                "superieur": "{{ u.profile.superieur.get_full_name|default:"Aucun" }}"
+                "actif": "{{ u.profile.actif|yesno:'True,False' }}",
+                "superieur": "{{ u.profile.superieur.get_full_name|default:'' }}",
+                "annee": "{{ u.annee_quota }}",
+                "quotas": {
+                  {% for t in types %}
+                    "{{ t.id }}": "{{ u.quotas_dict.t.id|default:'0' }}"{% if not forloop.last %},{% endif %}
+                  {% endfor %}
+                }
               }'
               data-bs-toggle="modal" data-bs-target="#userInfoModal" title="Infos utilisateur">ℹ️</button>
 
@@ -57,9 +63,16 @@
                 "prenom": "{{ u.first_name }}",
                 "email": "{{ u.email }}",
                 "username": "{{ u.username }}",
+                "poste": "{{ u.profile.poste|default:'' }}",
                 "role": "{{ u.profile.role }}",
                 "superieur": "{{ u.profile.superieur.id|default:'' }}",
-                "actif": "{{ u.profile.actif }}"
+                "actif": "{{ u.profile.actif|yesno:'True,False' }}",
+                "annee": "{{ u.annee_quota }}",
+                "quotas": {
+                  {% for t in types %}
+                    "{{ t.id }}": "{{ u.quotas_dict.t.id|default:'0' }}"{% if not forloop.last %},{% endif %}
+                  {% endfor %}
+                }
               }'
               data-bs-toggle="modal" data-bs-target="#editUserModal" title="Modifier">✏️</button>
 
@@ -74,8 +87,7 @@
   </div>
 </div>
 
-<!-- Modales -->
-
+<!-- Modales : Ajouter / Modifier / Supprimer / Info -->
 <!-- ✅ Modal Ajouter Utilisateur -->
 <div class="modal fade" id="addUserModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -87,54 +99,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body row g-3">
-        <!-- Champs formulaire -->
-        <div class="col-md-6">
-          <label>Nom</label>
-          <input type="text" name="last_name" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Prénom</label>
-          <input type="text" name="first_name" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Email</label>
-          <input type="email" name="email" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Nom d'utilisateur</label>
-          <input type="text" name="username" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Rôle</label>
-          <select name="role" class="form-select" required>
-            {% for key, val in roles.items %}
-              <option value="{{ key }}">{{ val }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label>Supérieur hiérarchique</label>
-          <select name="superieur" class="form-select">
-            <option value="">Aucun</option>
-            {% for s in supérieurs %}
-              <option value="{{ s.id }}">{{ s.get_full_name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label>Poste</label>
-          <input type="text" name="poste" class="form-control">
-        </div>
-        <div class="col-md-6 d-flex align-items-center">
-          <div class="form-check mt-4">
-            <input class="form-check-input" type="checkbox" name="actif" checked>
-            <label class="form-check-label">Actif</label>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Ajouter</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        {% include 'admin/user_form_fields.html' with is_edit=False %}
       </div>
     </form>
   </div>
@@ -152,49 +117,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body row g-3">
-        <div class="col-md-6">
-          <label>Nom</label>
-          <input type="text" id="edit_nom" name="last_name" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Prénom</label>
-          <input type="text" id="edit_prenom" name="first_name" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Email</label>
-          <input type="email" id="edit_email" name="email" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Nom d'utilisateur</label>
-          <input type="text" id="edit_username" name="username" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label>Rôle</label>
-          <select id="edit_role" name="role" class="form-select" required>
-            {% for key, val in roles.items %}
-              <option value="{{ key }}">{{ val }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label>Supérieur hiérarchique</label>
-          <select id="edit_superieur" name="superieur" class="form-select">
-            <option value="">Aucun</option>
-            {% for s in supérieurs %}
-              <option value="{{ s.id }}">{{ s.get_full_name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label>Poste</label>
-          <input type="text" id="edit_poste" name="poste" class="form-control">
-        </div>
-        <div class="col-md-6 d-flex align-items-center">
-          <div class="form-check mt-4">
-            <input id="edit_actif" class="form-check-input" type="checkbox" name="actif">
-            <label class="form-check-label">Actif</label>
-          </div>
-        </div>
+        {% include 'admin/user_form_fields.html' with is_edit=True %}
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-warning">Enregistrer</button>
@@ -250,6 +173,7 @@
   </div>
 </div>
 
+
 <!-- DataTables CSS & JS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -266,7 +190,7 @@ $(document).ready(function() {
   });
 });
 
-// Modales : Edit / Delete / Info
+// Pré-remplissage modal Modifier
 document.querySelectorAll('.btn-edit').forEach(btn => {
   btn.addEventListener('click', () => {
     const user = JSON.parse(btn.getAttribute('data-user'));
@@ -275,18 +199,29 @@ document.querySelectorAll('.btn-edit').forEach(btn => {
     document.getElementById('edit_prenom').value = user.prenom;
     document.getElementById('edit_email').value = user.email;
     document.getElementById('edit_username').value = user.username;
-    document.getElementById('edit_role').value = user.role;
-    document.getElementById('edit_superieur').value = user.superieur;
+    document.getElementById('edit_poste').value = user.poste;
+    document.querySelector('#editUserModal select[name="role"]').value = user.role;
+    document.querySelector('#editUserModal select[name="superieur"]').value = user.superieur;
+    document.querySelector('#editUserModal select[name="annee"]').value = user.annee;
     document.getElementById('edit_actif').checked = user.actif === "True";
+
+    // Remplir les quotas
+    const quotas = user.quotas;
+    for (const typeId in quotas) {
+      const input = document.getElementById(`edit_quota_${typeId}`);
+      if (input) input.value = quotas[typeId];
+    }
   });
 });
 
+// Supprimer utilisateur
 function openDeleteModal(id, name) {
   document.getElementById('delete_user_id').value = id;
   document.getElementById('delete_user_name').textContent = name;
   new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
 }
 
+// Infos utilisateur
 document.querySelectorAll('.btn-info').forEach(btn => {
   btn.addEventListener('click', () => {
     const user = JSON.parse(btn.getAttribute('data-user'));
@@ -296,8 +231,8 @@ document.querySelectorAll('.btn-info').forEach(btn => {
     document.getElementById('info_username').textContent = user.username;
     document.getElementById('info_poste').textContent = user.poste || 'Non précisé';
     document.getElementById('info_role').textContent = user.role;
-    document.getElementById('info_actif').textContent = user.actif;
-    document.getElementById('info_superieur').textContent = user.superieur;
+    document.getElementById('info_actif').textContent = user.actif === "True" ? "Oui" : "Non";
+    document.getElementById('info_superieur').textContent = user.superieur || 'Aucun';
   });
 });
 </script>

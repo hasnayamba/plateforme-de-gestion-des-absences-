@@ -13,10 +13,7 @@
       <button class="nav-link active" id="planifiees-tab" data-bs-toggle="tab" data-bs-target="#planifiees" type="button" role="tab">🗓️ Absences planifiées</button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" id="a-valider-tab" data-bs-toggle="tab" data-bs-target="#a-valider" type="button" role="tab">🛠️ À valider</button>
-    </li>
-    <li class="nav-item">
-      <button class="nav-link" id="a-approuver-tab" data-bs-toggle="tab" data-bs-target="#a-approuver" type="button" role="tab">✅ A approuver</button>
+      <button class="nav-link" id="a-valider-tab" data-bs-toggle="tab" data-bs-target="#a-valider" type="button" role="tab">🛠️ Absences à valider</button>
     </li>
     <li class="nav-item">
       <button class="nav-link" id="recuperations-tab" data-bs-toggle="tab" data-bs-target="#recuperations" type="button" role="tab">♻️ Récupérations</button>
@@ -28,30 +25,119 @@
 
   <!-- Contenu des onglets -->
   <div class="tab-content mt-3">
+
     <!-- Absences planifiées -->
     <div class="tab-pane fade show active" id="planifiees" role="tabpanel">
       {% include 'dp/partials/absences_planifiees.html' %}
     </div>
 
-    <!-- Absences à valider -->
+    <!-- Absences à valider par DP -->
     <div class="tab-pane fade" id="a-valider" role="tabpanel">
-      {% include 'dp/partials/absences_a_valider.html' %}
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Collaborateur</th>
+            <th>Type</th>
+            <th>Dates</th>
+            <th>Raison</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for absence in absences_a_valider_dp %}
+          <tr>
+            <td>{{ absence.collaborateur.get_full_name }}</td>
+            <td>{{ absence.type_absence.nom }}</td>
+            <td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
+            <td>{{ absence.raison|default:"-" }}</td>
+            <td>
+              <a href="{% url 'valider_absence_dp' absence.id %}" class="btn btn-success btn-sm">Valider</a>
+              <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#motifModal{{ absence.id }}">Rejeter</button>
+            </td>
+          </tr>
+
+          <!-- Modal motif de rejet -->
+          <div class="modal fade" id="motifModal{{ absence.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <form method="post" action="{% url 'rejeter_absence_dp' absence.id %}">
+                  {% csrf_token %}
+                  <div class="modal-header">
+                    <h5 class="modal-title">Motif du rejet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <textarea name="motif" class="form-control" rows="4" placeholder="Indiquer le motif du rejet" required></textarea>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Rejeter</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    <!-- Absences à approuver -->
-    <div class="tab-pane fade" id="a-approuver" role="tabpanel">
-      {% include 'dp/partials/absences_a_approuver.html' %}
-    </div>
-
-    <!-- Récupérations -->
+    <!-- Récupérations à valider par DP -->
     <div class="tab-pane fade" id="recuperations" role="tabpanel">
-      {% include 'dp/partials/recuperations.html' %}
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Collaborateur</th>
+            <th>Dates</th>
+            <th>Nombre de jours</th>
+            <th>Motif</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for recup in recuperation %}
+          <tr>
+            <td>{{ recup.utilisateur.get_full_name }}</td>
+            <td>{{ recup.date_debut }} → {{ recup.date_fin }}</td>
+            <td>{{ recup.nombre_jours }}</td>
+            <td>{{ recup.motif|default:"-" }}</td>
+            <td>
+              <a href="{% url 'valider_recuperation_dp' recup.id %}" class="btn btn-success btn-sm">Valider</a>
+              <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#motifModalRecup{{ recup.id }}">Rejeter</button>
+            </td>
+          </tr>
+
+          <!-- Modal motif de rejet pour récupération -->
+          <div class="modal fade" id="motifModalRecup{{ recup.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <form method="post" action="{% url 'rejeter_recuperation_dp' recup.id %}">
+                  {% csrf_token %}
+                  <div class="modal-header">
+                    <h5 class="modal-title">Motif du rejet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <textarea name="motif" class="form-control" rows="4" placeholder="Indiquer le motif du rejet" required></textarea>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Rejeter</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <!-- Calendrier annuel -->
     <div class="tab-pane fade" id="calendrier" role="tabpanel">
       {% include 'dp/partials/calendrier_annuel.html' %}
     </div>
+
   </div>
 </div>
 {% endblock %}

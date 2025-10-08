@@ -39,23 +39,14 @@ import csv
 # -----------------------------
 # Accueil 
 # -----------------------------
-from django.db.models import Q
-from calendar import month_name
-from django.contrib.auth.models import User
-from .models import Absence
-from django.shortcuts import render
-from django.contrib.auth.models import User
-from decimal import Decimal
-from .models import Absence, Recuperation   # <-- importer Recuperation
-
 def accueil_public(request):
-    # Mois en français
+    # Noms des mois
     mois_noms = [
         "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
         "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ]
 
-    # On ne garde que les utilisateurs actifs ayant au moins une absence ou une récupération
+#On ne garde que les utilisateurs actifs ayant au moins une absence ou une récupération
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
@@ -63,14 +54,16 @@ def accueil_public(request):
     ).distinct().order_by("last_name")
 
     lignes = []
+
     for user in utilisateurs:
-        # Absences validées RH/DP
+    # Absences en cours ou à venir, validées RH ou DP
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut__in=["verifie_drh", "valide_dp"]
+            statut__in=["verifie_drh", "valide_dp"],
+            date_fin__gte=date.today()  # On exclut les absences terminées
         ).order_by("date_debut")
 
-        # Récupérations
+    # Récupérations
         recups = Recuperation.objects.filter(
             utilisateur=user
         ).order_by("date_debut")
@@ -78,28 +71,29 @@ def accueil_public(request):
         absences_par_mois = [[] for _ in range(12)]
         total_absences = Decimal(0)
 
-        # Ajouter les absences
+        # ➕ Ajouter les absences
         for absence in absences:
             absence.obj_type = "Absence"
             mois = absence.date_debut.month - 1
             absences_par_mois[mois].append(absence)
             total_absences += absence.duree()
 
-        # Ajouter les récupérations avec calcul de date de fin (temporaire)
+        # Ajouter les récupérations si elles sont encore valides (pas expirées)
         for recup in recups:
             recup.obj_type = "Recuperation"
-            # Calcul dynamique de la date de fin sans toucher au modèle
             try:
                 recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
             except Exception:
                 recup.date_fin = recup.date_debut
-            mois = recup.date_debut.month - 1
-            absences_par_mois[mois].append(recup)
+
+            if recup.date_fin >= date.today():  # On exclut les récupérations passées
+                mois = recup.date_debut.month - 1
+                absences_par_mois[mois].append(recup)
 
         lignes.append({
             "user": user,
             "mois": absences_par_mois,
-            "total": total_absences,  # On ne compte pas les récupérations dans le total
+            "total": total_absences,
         })
 
     return render(request, "accueil.html", {
@@ -196,7 +190,7 @@ def dashboard_superieur(request):
         try:
             absence = Absence.objects.get(id=absence_id)
             if decision == 'valider':
-                absence.statut = 'valide_dp'
+                absence.statut = 'approuve_superieur'
             elif decision == 'rejeter':
                 absence.statut = 'rejete'
                 absence.motif_rejet = motif
@@ -408,7 +402,7 @@ def annuler_absence(request, absence_id):
         motif = request.POST.get('motif_annulation')
         if not motif:
             messages.error(request, "Veuillez fournir un motif d'annulation.")
-            return redirect('annuler_absence', absence_id=absence.id)
+            return redirect('mes_absences')
 
         absence.statut = 'annulee'
         absence.annulee_par_collaborateur = True
@@ -425,9 +419,7 @@ def annuler_absence(request, absence_id):
         messages.success(request, "Votre demande a été annulée avec succès.")
         return redirect('mes_absences')
 
-    return render(request, 'collaborateur/annuler_absence.html', {
-        'absence': absence,
-    })
+    return render(request, 'collaborateur/annuler_absence.html', {'absence': absence})
 
     
     
@@ -712,11 +704,13 @@ def dashboard_drh(request):
 
 @login_required
 def valider_recuperation(request, recuperation_id):
-    recuperation = get_object_or_404(Recuperation, id=recuperation_id)
-    if recuperation.statut == 'en_attente':
-        recuperation.statut = 'valide'
-        recuperation.save()
-        messages.success(request, f"La récupération de {recuperation.utilisateur.get_full_name} a été validée.")
+    recup = get_object_or_404(Recuperation, id=recuperation_id)
+    if recup.statut == 'en_attente':
+        recup.statut = 'verifie_drh'
+        recup.save()
+        messages.success(request, f"La récupération de {recup.utilisateur.get_full_name()} a été vérifiée par la DRH et transmise au DP.")
+    else:
+        messages.error(request, "Impossible de vérifier cette récupération (statut incorrect).")
     return redirect('dashboard_drh')
 
 
@@ -848,13 +842,16 @@ def telecharger_justificatif(request, file_path):
 @login_required
 def dashboard_dp(request):
     profil = Profile.objects.get(user=request.user)
-    collaborateurs = Profile.objects.filter(superieur=request.user, role='drh').values_list('user', flat=True)
-
-    absences_a_valider = Absence.objects.filter(
-        collaborateur__in=collaborateurs,
-        statut='en_attente'
-    )
     
+    # Collaborateurs sous la responsabilité du DP
+    collaborateurs = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
+
+    # Absences à valider par le DP (déjà approuvées par le supérieur)
+    absences_a_valider_dp = Absence.objects.filter(
+        statut='approuve_superieur'
+    ).order_by('date_debut')
+
+    # Absences planifiées visibles par le DP
     mois_selectionne = int(request.GET.get('mois', datetime.now().month))
     type_id = request.GET.get('type')
 
@@ -866,17 +863,18 @@ def dashboard_dp(request):
         absences_planifiees = absences_planifiees.filter(type_absence_id=type_id)
     absences_planifiees = absences_planifiees.order_by('date_debut')
 
-    absences_a_valider_dp = Absence.objects.filter(
-        statut='verifie_drh'
-    ).order_by('date_debut')
-
+    # Absences déjà validées
     absences_validees = Absence.objects.filter(statut='valide_dp').order_by('date_debut')
-    # --- Récupérations --- #
-     
-    recuperations_attente = Recuperation.objects.filter(statut='en_attente').order_by('-date_soumission')
-    recuperations_verifiees = Recuperation.objects.filter(statut='valide').order_by('-date_soumission')
 
+    # --- Gestion des récupérations --- #
+    recuperations_en_attente = Recuperation.objects.filter(statut='en_attente').select_related('utilisateur').order_by('-date_soumission')
 
+    recuperation = Recuperation.objects.filter(statut='verifie_drh').select_related('utilisateur').order_by('-date_soumission')
+    for recup in recuperation:
+        recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
+
+    recuperations_validees = Recuperation.objects.filter(statut='valide').select_related('utilisateur').order_by('-date_soumission')
+    recuperations_rejetees = Recuperation.objects.filter(statut='rejete').select_related('utilisateur').order_by('-date_soumission')
 
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
@@ -885,33 +883,143 @@ def dashboard_dp(request):
         'absences_planifiees': absences_planifiees,
         'absences_a_valider_dp': absences_a_valider_dp,
         'absences_validees': absences_validees,
+        'recuperation': recuperation,
+        'recuperations_attente': recuperations_en_attente,
         'mois_list': mois_list,
         'mois_selectionne': mois_selectionne,
-        'recuperations_attente': recuperations_attente,
-        'recuperations_verifiees': recuperations_verifiees,
         'types': types,
         'type_selectionne': int(type_id) if type_id else None,
-        'absences' : absences_a_valider,
     }
     return render(request, 'dashboard/dp.html', context)
 
 
+# -----------------------------
+# Absences DP
+# -----------------------------
 
 @login_required
 def valider_absence_dp(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
 
-    absence.valide_par_dp = True
-    absence.date_validation_dp = timezone.now()
-    absence.statut = 'valide_dp'
-    absence.save()  # déclenche la déduction de quota + historique dans model.save()
+    # Vérifie que l'absence est bien à valider par le DP
+    if absence.statut == 'approuve_superieur':
+        absence.statut = 'valide_dp'
+        absence.date_validation_dp = timezone.now()
+        absence.save()
 
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        decision='valide_par_dp',
-        motif="Validé"
-    )
+        # Historique
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            role_valide='dp',
+            decision='valider'
+        )
+
+        messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été validée.")
+    else:
+        messages.error(request, "Cette absence ne peut pas être validée (statut incorrect ou déjà validée).")
+
+    return redirect('dashboard_dp')
+
+
+@login_required
+def rejeter_absence_dp(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+
+    if request.method == 'POST':
+        motif = request.POST.get('motif')
+        if absence.approuve_par_superieur and not absence.valide_par_dp:
+            absence.statut = 'rejete'
+            absence.save()
+
+            ValidationHistorique.objects.create(
+                absence=absence,
+                utilisateur=request.user,
+                role_valide='dp',
+                decision='rejeter',
+                motif=motif
+            )
+            messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été rejetée.")
+        else:
+            messages.error(request, "Impossible de rejeter cette absence (déjà validée ou non approuvée par le supérieur).")
+    return redirect('dashboard_dp')
+
+
+@login_required
+def annuler_absence_dp(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+
+    if absence.valide_par_dp:
+        absence.valide_par_dp = False
+        absence.statut = 'en_attente'  # ou 'approuve_superieur' si tu veux conserver l'approbation
+        absence.save()
+
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            role_valide='dp',
+            decision='annuler',
+            motif='Annulation par DP'
+        )
+        messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été annulée.")
+    else:
+        messages.error(request, "Impossible d'annuler une absence non validée par le DP.")
+    return redirect('dashboard_dp')
+
+
+# -----------------------------
+# Récupérations DP
+# -----------------------------
+
+@login_required
+def valider_recuperation_dp(request, recup_id):
+    recup = get_object_or_404(Recuperation, id=recup_id)
+
+    # Le DP valide uniquement une récupération déjà vérifiée par la DRH
+    if recup.statut == 'verifie_drh':
+        recup.statut = 'valide'
+        recup.save()
+        messages.success(request, f"La récupération de {recup.utilisateur.get_full_name()} a été validée par le DP.")
+    else:
+        messages.error(request, "Impossible de valider cette récupération (statut incorrect).")
+    return redirect('dashboard_dp')
+
+
+@login_required
+def rejeter_recuperation_dp(request, recup_id):
+    recup = get_object_or_404(Recuperation, id=recup_id)
+
+    if request.method == 'POST':
+        motif = request.POST.get('motif', '').strip()
+        if recup.statut == 'verifie_drh':
+            recup.statut = 'rejete'
+            # tu utilises ici motif_annulation pour stocker le motif du rejet
+            recup.motif_annulation = motif
+            recup.save()
+            messages.success(request, f"La récupération de {recup.utilisateur.get_full_name()} a été rejetée par le DP.")
+        else:
+            messages.error(request, "Impossible de rejeter cette récupération (statut incorrect).")
+    return redirect('dashboard_dp')
+
+
+@login_required
+def annuler_recuperation_dp(request, recup_id):
+    recup = get_object_or_404(Recuperation, id=recup_id)
+
+    if recup.statut == 'valide':
+        recup.statut = 'en_attente'
+        recup.save()
+
+        ValidationHistorique.objects.create(
+            absence=None,
+            utilisateur=request.user,
+            role_valide='dp',
+            decision='annuler',
+            motif='Annulation par DP'
+        )
+        messages.success(request, f"La récupération de {recup.utilisateur.get_full_name()} a été annulée.")
+    else:
+        messages.error(request, "Impossible d'annuler cette récupération (non validée).")
     return redirect('dashboard_dp')
 
 
@@ -945,20 +1053,6 @@ def exporter_absences_excel(request):
         ])
 
     return response
-
-@login_required
-def rejeter_absence_dp(request, absence_id):
-    absence = get_object_or_404(Absence, id=absence_id)
-    absence.statut = 'rejete'
-    absence.save()
-
-    ValidationHistorique.objects.create(
-        absence=absence,
-        utilisateur=request.user,
-        decision='rejete_par_dp',
-        motif="Rejeté par le DP"
-    )
-    return redirect('dashboard_dp')
 
 
 
@@ -1179,14 +1273,6 @@ def soumettre_recuperation(request):
 
     return redirect('dashboard_collaborateur')
 
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import Recuperation
-from datetime import timedelta
-from django.utils import timezone
-
 # -----------------------------
 # Modifier une récupération
 # -----------------------------
@@ -1203,7 +1289,6 @@ def modifier_recuperation(request, recup_id):
         nombre_jours = request.POST.get('nombre_jours')
         motif = request.POST.get('motif')
         justificatif = request.FILES.get('justificatif')
-      
         if nombre_jours:
             recup.nombre_jours = nombre_jours
         if motif:
@@ -1233,21 +1318,23 @@ def modifier_recuperation(request, recup_id):
 def annuler_recuperation(request, recup_id):
     recup = get_object_or_404(Recuperation, id=recup_id, utilisateur=request.user)
 
+    # Empêche l’annulation si déjà validée
     if recup.statut == 'valide':
         messages.error(request, "Cette récupération est déjà validée et ne peut pas être annulée.")
         return redirect('mes_absences')
 
     if request.method == 'POST':
-        motif = request.POST.get('motif')
+        motif = request.POST.get('motif_annulation')
         if not motif:
-            messages.error(request, "Veuillez fournir un motif pour l'annulation.")
+            messages.error(request, "Veuillez fournir un motif d'annulation.")
             return redirect('mes_absences')
 
-        # On considère que la récupération est annulée
         recup.statut = 'annulee'
         recup.motif_annulation = motif
         recup.save()
-        messages.success(request, "Récupération annulée avec succès.")
+
+        messages.success(request, "Votre récupération a été annulée avec succès.")
         return redirect('mes_absences')
 
     return render(request, 'collaborateur/annuler_recuperation.html', {'recup': recup})
+

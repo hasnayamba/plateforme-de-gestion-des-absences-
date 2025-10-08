@@ -43,7 +43,7 @@ urlpatterns = [
     path('quotas/<int:quota_id>/mettre-a-jour/', views.mettre_a_jour_quota, name='mettre_a_jour_quota'),
     path('telecharger/<path:file_path>', views.telecharger_justificatif, name='telecharger'),
     path("drh/absence/<int:absence_id>/modifier/", views.modifier_absence_drh, name="modifier_absence_drh"),
-     path('drh/recuperation/<int:recuperation_id>/valider/', views.valider_recuperation, name='valider_recuperation'),
+    path('drh/recuperation/<int:recuperation_id>/valider/', views.valider_recuperation, name='valider_recuperation'),
 
 
 
@@ -55,6 +55,9 @@ urlpatterns = [
     path('absence/<int:absence_id>/valider_dp/', views.valider_absence_dp, name='valider_absence_dp'),
     path('absence/<int:absence_id>/rejeter_dp/', views.rejeter_absence_dp, name='rejeter_absence_dp'),  
     path('dashboard/dp/export/', views.exporter_absences_excel, name='exporter_absences_excel'),
+    path('dashboard/dp/recuperation/<int:recup_id>/valider/', views.valider_recuperation_dp, name='valider_recuperation_dp'),
+    path('dashboard/dp/recuperation/<int:recup_id>/rejeter/', views.rejeter_recuperation_dp, name='rejeter_recuperation_dp'),
+    
   
     
 # -----------------------------#

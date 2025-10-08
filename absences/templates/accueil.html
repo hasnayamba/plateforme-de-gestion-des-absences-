@@ -18,76 +18,80 @@
         </div>
     </nav>
 
-    <!-- Contenu principal -->
-    <div class="container mt-4">
-        <h4 class="text-center mb-4">Tableau Annuel des Absences & Récupérations</h4>
+<div class="container mt-4">
 
-        {% if lignes %}
-        <div class="table-responsive">
-            <table class="table table-bordered text-center align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Collaborateurs</th>
-                        {% for mois in mois_noms %}
-                            <th>{{ mois }}</th>
-                        {% endfor %}
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ligne in lignes %}
-                        <tr {% if forloop.counter0|divisibleby:2 %}style="background-color: #f8f9fa;"{% endif %}>
-                            <td class="text-start fw-bold">{{ ligne.user.get_full_name }}</td>
-                            {% for absences_mois in ligne.mois %}
-                                <td>
-                                    {% if absences_mois %}
-                                        {% for item in absences_mois %}
-                                            <div class="mb-1">
-                                                {% if item.obj_type == "Absence" %}
-                                                    {% if item.statut == "verifie_drh" %}
-                                                        <span class="badge bg-warning text-dark" title="Absence validée RH">RH</span>
-                                                    {% elif item.statut == "valide_dp" %}
-                                                        <span class="badge"
-                                                              style="background-color: {{ item.type_absence.couleur }}; font-size: 0.9em;"
-                                                              title="Absence validée DP - {{ item.type_absence.nom }}">
-                                                            {{ item.type_absence.nom|slice:":10"|upper }}
-                                                        </span>
-                                                    {% endif %}
-                                                {% elif item.obj_type == "Recuperation" %}
-                                                    {% if item.statut == "attente" %}
-                                                        <span class="badge bg-info text-dark" title="Récupération en attente">REC ATT</span>
-                                                    {% elif item.statut == "valide" %}
-                                                        <span class="badge bg-success" title="Récupération validée">REC</span>
-                                                    {% endif %}
-                                                {% endif %}
-                                                <br>
-                                                <small>{{ item.date_debut|date:"d/m" }} → {{ item.date_fin|date:"d/m" }}</small>
-                                            </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            {% endfor %}
-                            <td class="fw-bold">{{ ligne.total|floatformat:1 }} j</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <h3 class="mb-4 text-center">📅 Tableau récapitulatif des absences et récupérations</h3>
+  <table class="table table-bordered table-striped table-hover align-middle">
+    <thead class="table-dark text-center">
+      <tr>
+        <th>Collaborateur</th>
+        {% for mois in mois_noms %}
+          <th>{{ mois }}</th>
+        {% endfor %}
+        
+      </tr>
+    </thead>
 
-        <!-- Légende -->
-        <div class="mt-3">
-            <h6>Légende :</h6>
-            <span class="badge bg-warning text-dark">RH</span> = Absence validée par la RH  
-            <span class="badge bg-secondary">Couleur type</span> = Absence validée par le DP  
-            <span class="badge bg-info text-dark">REC ATT</span> = Récupération en attente  
-            <span class="badge bg-success">REC</span> = Récupération validée
-        </div>
-        {% else %}
-            <p class="text-center text-muted">Aucune absence ou récupération trouvée.</p>
-        {% endif %}
-    </div>
+    <tbody>
+      {% for ligne in lignes %}
+        <tr>
+          <td class="fw-bold">{{ ligne.user.get_full_name }}</td>
+
+          {% for abs_mois in ligne.mois %}
+            <td class="text-center">
+              {% if abs_mois %}
+                {% for absence in abs_mois %}
+                  
+                  {% if absence.obj_type == "Absence" %}
+                    {% if absence.statut == "approuve_superieur" %}
+                      <span class="badge bg-primary text-white d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+
+                    {% elif absence.statut == "verifie_drh" %}
+                      <span class="badge bg-warning text-dark d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+
+                    {% elif absence.statut == "valide_dp" %}
+                      <span class="badge bg-success text-white d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+                    {% endif %}
+                  
+                  {% elif absence.obj_type == "Recuperation" and absence.statut == "valide" %}
+                    <span class="badge bg-info text-dark d-block mb-1">
+                      Récupération<br>
+                      ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                    </span>
+                  {% endif %}
+
+                {% endfor %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="14" class="text-center text-muted">Aucune absence ni récupération à afficher.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- 🟦 Légende -->
+  <div class="mb-3 text-center">
+    <span class="badge bg-warning text-dark me-2">Vérifié par RH</span>
+    <span class="badge bg-primary text-white me-2">Approuvé par Supérieur</span>
+    <span class="badge bg-success text-white me-2">Validé par DP</span>
+    <span class="badge bg-info text-dark">Récupération validée RH</span>
+  </div>
 
 </body>
 </html>
