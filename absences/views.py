@@ -683,10 +683,17 @@ def dashboard_drh(request):
     for absence in absences_a_verifier:
         key = (absence.collaborateur.id, absence.type_absence.id, absence.date_debut.year)
         absence.quota_disponible = quota_map.get(key)
+        
+   # --- Collaborateurs sous supervision (rôle supérieur) ---
+    collaborateurs_rh = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
+    absences_sous_supervision = Absence.objects.filter(
+        collaborateur__in=collaborateurs_rh
+    ).select_related('collaborateur', 'type_absence').order_by('-date_debut')
 
     # --- Contexte
     context = {
         'absences_a_verifier': absences_a_verifier,
+        'absences_sous_supervision': absences_sous_supervision,
         'absences_validees': Absence.objects.filter(statut='valide_dp'),
         'absences': absences,
         'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_validation'),

@@ -218,6 +218,57 @@
       </table>
     </div>
   </div>
+      <!-- === Sous ma supervision (Supérieur) === -->
+    <div class="tab-pane fade" id="collabs">
+      <h5>Absences de mes collaborateurs</h5>
+      <table class="table table-bordered table-hover table-sm">
+        <thead class="table-light">
+          <tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Jours</th><th>Justificatif</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for absence in absences_sous_supervision %}
+          <tr>
+            <td>
+              {{ absence.collaborateur.get_full_name }}
+            </td>
+            <td>{{ absence.type_absence.nom }}</td>
+            <td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
+            <td>{{ absence.get_statut_display }}</td>
+            <td>{{ absence.nombre_jours }}</td>
+            <td>{% if absence.justificatif %}<a href="{{ absence.justificatif.url }}" target="_blank">Voir</a>{% else %}—{% endif %}</td>
+            <td>
+              {% if absence.statut == 'verifie_drh' %}
+                <form method="post" action="{% url 'approuver_absence' absence.id %}" style="display:inline;">{% csrf_token %}
+                  <button type="submit" class="btn btn-success btn-sm">Approuver</button>
+                </form>
+                <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejeterSup{{ absence.id }}">Rejeter</button>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Modal Rejet Supérieur -->
+          <div class="modal fade" id="modalRejeterSup{{ absence.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <form method="post" action="{% url 'rejeter_absence' absence.id %}">{% csrf_token %}
+                <div class="modal-content">
+                  <div class="modal-header"><h5 class="modal-title">Motif du rejet</h5></div>
+                  <div class="modal-body"><textarea name="motif" class="form-control" required></textarea></div>
+                  <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Confirmer</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% empty %}
+          <tr><td colspan="7" class="text-center">Aucune absence à valider.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 </div> <!-- end container -->
 
 <!-- ================== MODALS ================== -->
