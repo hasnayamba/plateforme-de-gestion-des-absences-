@@ -41,7 +41,7 @@ urlpatterns = [
     path('absence/<int:absence_id>/verifier/', views.verifier_absence, name='verifier_absence'),
     path('absence/<int:absence_id>/rejeter_drh/', views.rejeter_absence_drh, name='rejeter_absence_drh'),
     path('quotas/<int:quota_id>/mettre-a-jour/', views.mettre_a_jour_quota, name='mettre_a_jour_quota'),
-    path('telecharger/<path:file_path>', views.telecharger_justificatif, name='telecharger'),
+    path('telecharger/<path:file_path>', views.telecharger_justificatif, name='telecharger_justificatif'),
     path("drh/absence/<int:absence_id>/modifier/", views.modifier_absence_drh, name="modifier_absence_drh"),
     path('drh/recuperation/<int:recuperation_id>/valider/', views.valider_recuperation, name='valider_recuperation'),
 
