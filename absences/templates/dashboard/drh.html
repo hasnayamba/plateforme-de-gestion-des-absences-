@@ -201,7 +201,7 @@
             <td>{{ r.motif }}</td>
             <td>
               {% if r.justificatif %}
-               <a href="{% url 'telecharger' r.justificatif.name %}" target="_blank">📂 Voir PDF</a>
+               <a href="{% url 'telecharger_justificatif' r.justificatif.name %}" target="_blank">📂 Voir PDF</a>
               {% endif %}
             </td>
             <td>
@@ -237,7 +237,7 @@
             <td>{{ absence.get_statut_display }}</td>
             <td>{{ absence.nombre_jours }}</td>
             <td>
-              {% if absence.justificatif %}<a href="{% url 'telecharger' r.justificatif.name %}" target="_blank">📂 Voir PDF</a>{% else %}—{% endif %}</td>
+              {% if absence.justificatif %}<a href="{% url 'telecharger_justificatif' r.justificatif.name %}" target="_blank">📂 Voir PDF</a>{% else %}—{% endif %}</td>
             <td>
               {% if absence.statut == 'verifie_drh' %}
                 <form method="post" action="{% url 'approuver_absence' absence.id %}" style="display:inline;">{% csrf_token %}
