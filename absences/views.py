@@ -13,6 +13,9 @@ from django.http import JsonResponse
 from django.http import FileResponse, Http404
 import os
 import json
+from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import generate_blob_sas, BlobSasPermissions
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db.models import Prefetch
 from django.utils.html import escape
@@ -37,16 +40,16 @@ import csv
 
 
 # -----------------------------
-# Accueil 
+# Accueil public
 # -----------------------------
 def accueil_public(request):
-    # Noms des mois
+    # Liste des mois
     mois_noms = [
         "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
         "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
     ]
 
-#On ne garde que les utilisateurs actifs ayant au moins une absence ou une récupération
+    # Utilisateurs actifs uniquement
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
@@ -56,17 +59,15 @@ def accueil_public(request):
     lignes = []
 
     for user in utilisateurs:
-    # Absences en cours ou à venir, validées RH ou DP
+        # Absences encore valides (non terminées)
         absences = Absence.objects.filter(
             collaborateur=user,
             statut__in=["verifie_drh", "valide_dp"],
-            date_fin__gte=date.today()  # On exclut les absences terminées
+            date_fin__gte=date.today()  # exclut les absences expirées
         ).order_by("date_debut")
 
-    # Récupérations
-        recups = Recuperation.objects.filter(
-            utilisateur=user
-        ).order_by("date_debut")
+        # Récupérations encore valides (non expirées)
+        recups = Recuperation.objects.filter(utilisateur=user).order_by("date_debut")
 
         absences_par_mois = [[] for _ in range(12)]
         total_absences = Decimal(0)
@@ -78,7 +79,7 @@ def accueil_public(request):
             absences_par_mois[mois].append(absence)
             total_absences += absence.duree()
 
-        # Ajouter les récupérations si elles sont encore valides (pas expirées)
+        # ➕ Ajouter les récupérations (encore valides uniquement)
         for recup in recups:
             recup.obj_type = "Recuperation"
             try:
@@ -86,15 +87,17 @@ def accueil_public(request):
             except Exception:
                 recup.date_fin = recup.date_debut
 
-            if recup.date_fin >= date.today():  # On exclut les récupérations passées
+            if recup.date_fin >= date.today():  # garde seulement les récupérations encore valides
                 mois = recup.date_debut.month - 1
                 absences_par_mois[mois].append(recup)
 
-        lignes.append({
-            "user": user,
-            "mois": absences_par_mois,
-            "total": total_absences,
-        })
+        # ⚠️ On ajoute le collaborateur seulement s’il a encore au moins une absence/récupération valide
+        if any(absences_par_mois):
+            lignes.append({
+                "user": user,
+                "mois": absences_par_mois,
+                "total": total_absences,
+            })
 
     return render(request, "accueil.html", {
         "mois_noms": mois_noms,
@@ -822,24 +825,20 @@ def mettre_a_jour_quota(request, quota_id):
     return redirect('dashboard_drh')
 
 def telecharger_justificatif(request, file_path):
-    """
-    Sert un fichier stocké sur Azure Blob Storage directement dans le navigateur.
-    """
-    if default_storage.exists(file_path):
-        # Ouvrir le fichier depuis Azure
-        fichier = default_storage.open(file_path, 'rb')
+    blob_service_client = BlobServiceClient(
+        f"https://{settings.AZURE_ACCOUNT_NAME}.blob.core.windows.net",
+        credential=settings.AZURE_ACCOUNT_KEY
+    )
+    container_client = blob_service_client.get_container_client(settings.AZURE_CONTAINER)
+    blob_client = container_client.get_blob_client(file_path)
 
-        # Détecter le type MIME
-        content_type, _ = mimetypes.guess_type(file_path)
-        if not content_type:
-            content_type = 'application/octet-stream'
-
-        # Retourner le fichier pour affichage inline
-        response = FileResponse(fichier, content_type=content_type)
-        response['Content-Disposition'] = f'inline; filename="{file_path.split("/")[-1]}"'
-        return response
-    else:
-        raise Http404(f"Fichier {file_path} non trouvé sur Azure Blob Storage.")
+    stream = blob_client.download_blob()
+    response = HttpResponse(
+        stream.readall(),
+        content_type='application/octet-stream'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{file_path}"'
+    return response
 
 # -----------------------------
 # Dashboard pour le Directeur Pays
