@@ -53,7 +53,7 @@ def accueil_public(request):
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
-        Q(absences__statut__in=["verifie_drh", "valide_dp"]) | Q(recuperation__isnull=False)
+        Q(absences__statut__in=["verifie_drh", "approuve_superieur", "valide_dp"]) | Q(recuperation__isnull=False)
     ).distinct().order_by("last_name")
 
     lignes = []
@@ -62,7 +62,7 @@ def accueil_public(request):
         # Absences encore valides (non terminées)
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut__in=["verifie_drh", "valide_dp"],
+            statut__in=["verifie_drh", "approuve_superieur", "valide_dp"],
             date_fin__gte=date.today()  # exclut les absences expirées
         ).order_by("date_debut")
 

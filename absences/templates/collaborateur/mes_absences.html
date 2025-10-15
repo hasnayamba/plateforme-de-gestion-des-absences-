@@ -45,11 +45,11 @@
             {% if demande.statut == 'en_attente' %}
               <span class="badge bg-warning text-dark">En attente</span>
             {% elif demande.statut == 'approuve_superieur' %}
-              <span class="badge bg-success">Approuvée par supérieur</span>
+              <span class="badge bg-primary">Approuvée par supérieur</span>
             {% elif demande.statut == 'verifie_drh' %}
               <span class="badge bg-info text-dark">Vérifiée DRH</span>
             {% elif demande.statut == 'valide_dp' %}
-              <span class="badge bg-primary">Validée DP</span>
+              <span class="badge bg-success">Validée DP</span>
             {% elif demande.statut == 'rejete' %}
               <span class="badge bg-danger">Rejetée</span>
             {% elif demande.statut == 'annulee' %}
