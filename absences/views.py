@@ -849,13 +849,16 @@ def telecharger_justificatif(request, file_path):
 def dashboard_dp(request):
     profil = Profile.objects.get(user=request.user)
     
-    # Collaborateurs sous la responsabilité du DP
-    collaborateurs = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
+    # Collaborateurs sous la responsabilité du DP (où il est supérieur hiérarchique)
+    collaborateurs_sous_dp = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
 
-    # Absences à valider par le DP (déjà approuvées par le supérieur)
+    # Absences à valider :
+    # - approuvées par les supérieurs (DP doit valider)
+    # - vérifiées par la RH mais dont le DP est aussi le supérieur hiérarchique direct
     absences_a_valider_dp = Absence.objects.filter(
-        statut='approuve_superieur'
-    ).order_by('date_debut')
+        Q(statut='approuve_superieur') |
+        Q(statut='verifie_drh', collaborateur__in=collaborateurs_sous_dp)
+    ).select_related('collaborateur', 'type_absence').order_by('date_debut')
 
     # Absences planifiées visibles par le DP
     mois_selectionne = int(request.GET.get('mois', datetime.now().month))
@@ -864,23 +867,24 @@ def dashboard_dp(request):
     absences_planifiees = Absence.objects.filter(
         Q(statut__in=['en_attente', 'approuve_superieur', 'verifie_drh', 'valide_dp']),
         date_debut__month=mois_selectionne
-    )
+    ).select_related('collaborateur', 'type_absence')
+
     if type_id:
         absences_planifiees = absences_planifiees.filter(type_absence_id=type_id)
+
     absences_planifiees = absences_planifiees.order_by('date_debut')
 
-    # Absences déjà validées
-    absences_validees = Absence.objects.filter(statut='valide_dp').order_by('date_debut')
+    absences_validees = Absence.objects.filter(
+        statut='valide_dp'
+    ).order_by('date_debut')
 
     # --- Gestion des récupérations --- #
-    recuperations_en_attente = Recuperation.objects.filter(statut='en_attente').select_related('utilisateur').order_by('-date_soumission')
+    recuperation = Recuperation.objects.filter(
+        statut='verifie_drh'
+    ).select_related('utilisateur').order_by('-date_soumission')
 
-    recuperation = Recuperation.objects.filter(statut='verifie_drh').select_related('utilisateur').order_by('-date_soumission')
     for recup in recuperation:
         recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
-
-    recuperations_validees = Recuperation.objects.filter(statut='valide').select_related('utilisateur').order_by('-date_soumission')
-    recuperations_rejetees = Recuperation.objects.filter(statut='rejete').select_related('utilisateur').order_by('-date_soumission')
 
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
@@ -890,13 +894,13 @@ def dashboard_dp(request):
         'absences_a_valider_dp': absences_a_valider_dp,
         'absences_validees': absences_validees,
         'recuperation': recuperation,
-        'recuperations_attente': recuperations_en_attente,
         'mois_list': mois_list,
         'mois_selectionne': mois_selectionne,
         'types': types,
         'type_selectionne': int(type_id) if type_id else None,
     }
     return render(request, 'dashboard/dp.html', context)
+
 
 
 # -----------------------------
@@ -906,35 +910,43 @@ def dashboard_dp(request):
 @login_required
 def valider_absence_dp(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
+    profil_dp = Profile.objects.get(user=request.user)
 
-    # Vérifie que l'absence est bien à valider par le DP
-    if absence.statut == 'approuve_superieur':
+    # Cas 1 : absence approuvée par un supérieur (normal)
+    # Cas 2 : absence vérifiée RH mais DP est aussi supérieur du collaborateur
+    if absence.statut == 'approuve_superieur' or (
+        absence.statut == 'verifie_drh' and absence.collaborateur.profile.superieur == request.user
+    ):
         absence.statut = 'valide_dp'
         absence.date_validation_dp = timezone.now()
         absence.save()
 
-        # Historique
         ValidationHistorique.objects.create(
             absence=absence,
             utilisateur=request.user,
             role_valide='dp',
             decision='valider'
         )
-
-        messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été validée.")
+        messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été validée par le DP.")
     else:
-        messages.error(request, "Cette absence ne peut pas être validée (statut incorrect ou déjà validée).")
+        messages.error(request, "Cette absence ne peut pas être validée (statut incorrect ou non autorisée).")
 
     return redirect('dashboard_dp')
-
 
 @login_required
 def rejeter_absence_dp(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
+    profil_dp = Profile.objects.get(user=request.user)
 
     if request.method == 'POST':
-        motif = request.POST.get('motif')
-        if absence.approuve_par_superieur and not absence.valide_par_dp:
+        motif = request.POST.get('motif', '').strip()
+
+        if absence.statut in ['approuve_superieur', 'verifie_drh']:
+            # Le DP peut rejeter dans les mêmes conditions que valider
+            if absence.statut == 'verifie_drh' and absence.collaborateur.profile.superieur != request.user:
+                messages.error(request, "Vous ne pouvez pas rejeter cette absence (non sous votre supervision).")
+                return redirect('dashboard_dp')
+
             absence.statut = 'rejete'
             absence.save()
 
@@ -947,7 +959,8 @@ def rejeter_absence_dp(request, absence_id):
             )
             messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été rejetée.")
         else:
-            messages.error(request, "Impossible de rejeter cette absence (déjà validée ou non approuvée par le supérieur).")
+            messages.error(request, "Impossible de rejeter cette absence (statut incorrect).")
+
     return redirect('dashboard_dp')
 
 
