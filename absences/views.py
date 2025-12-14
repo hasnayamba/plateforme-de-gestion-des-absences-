@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.http import FileResponse, Http404
 import os
 import json
+from django.core.paginator import Paginator
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob import generate_blob_sas, BlobSasPermissions
 from django.conf import settings
@@ -53,7 +54,7 @@ def accueil_public(request):
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
-        Q(absences__statut__in=["verifie_drh", "approuve_superieur", "valide_dp"]) | Q(recuperation__isnull=False)
+        Q(absences__statut__in=["verifie_drh", "valider", "approuve_superieur", "valide_dp"]) | Q(recuperation__isnull=False)
     ).distinct().order_by("last_name")
 
     lignes = []
@@ -62,7 +63,7 @@ def accueil_public(request):
         # Absences encore valides (non terminées)
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut__in=["verifie_drh", "approuve_superieur", "valide_dp"],
+            statut__in=["verifie_drh","valider","approuve_superieur", "valide_dp"],
             date_fin__gte=date.today()  # exclut les absences expirées
         ).order_by("date_debut")
 
@@ -541,7 +542,7 @@ def mes_absences(request):
     jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
 
     # 7️⃣ Statuts modifiables pour les absences
-    statuts_modifiables = [s[0] for s in STATUT_ABSENCE if s[0] in ('en_attente', 'approuve_superieur', 'verifie_drh')]
+    statuts_modifiables = [s[0] for s in STATUT_ABSENCE if s[0] in ('en_attente', 'valider', 'approuve_superieur', 'verifie_drh')]
 
     return render(request, 'collaborateur/mes_absences.html', {
         'absences': demandes,
@@ -555,6 +556,7 @@ def mes_absences(request):
 @login_required
 def calendrier_absences(request):
     absences = Absence.objects.filter(statut='valide_dp')
+    recuperation = Recuperation.objects.filter(statut='valide')
     types = TypeAbsence.objects.all()
     utilisateurs = User.objects.all()
 
@@ -568,6 +570,22 @@ def calendrier_absences(request):
             "collaborateur": a.collaborateur.get_full_name(),
             "color": a.type_absence.couleur,
         })
+        
+    events = []
+    for r in recuperation:
+        try:
+            date_fin = r.date_debut + timedelta(days=float(r.nombre_jours))
+        except Exception:
+            date_fin = r.date_debut
+        events.append({
+            "title": f"{r.collaborateur.get_full_name()} ({r.type_absence.nom})",
+            "start": r.date_debut.isoformat(),
+            "end": date_fin.isoformat(),  # FullCalendar exclut le dernier jour
+            "type": r.type_absence.nom,
+            "collaborateur": r.collaborateur.get_full_name(),
+            "color": r.type_absence.couleur,
+        })
+                   
 
     return render(request, 'collaborateur/calendar_absences.html', {
         'events_json': json.dumps(events),
@@ -848,6 +866,22 @@ def telecharger_justificatif(request, file_path):
 @login_required
 def dashboard_dp(request):
     profil = Profile.objects.get(user=request.user)
+    historiques = ValidationHistorique.objects.all().order_by('-date_validation')
+    recuperations = Recuperation.objects.all().order_by('-date_soumission')
+
+    # Fusionner les deux listes
+    donnees = list(historiques) + list(recuperations)
+
+    # Trier par date (la plus récente)
+    donnees.sort(
+        key=lambda x: x.date_validation if hasattr(x, 'date_validation') else x.date_soumission,
+        reverse=True
+    )
+
+    paginator = Paginator(donnees, 10)  
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     
     # Collaborateurs sous la responsabilité du DP (où il est supérieur hiérarchique)
     collaborateurs_sous_dp = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
@@ -877,6 +911,10 @@ def dashboard_dp(request):
     absences_validees = Absence.objects.filter(
         statut='valide_dp'
     ).order_by('date_debut')
+    
+    recuperations_validees = Recuperation.objects.filter(
+        statut='valide'
+    )
 
     # --- Gestion des récupérations --- #
     recuperation = Recuperation.objects.filter(
@@ -885,6 +923,8 @@ def dashboard_dp(request):
 
     for recup in recuperation:
         recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
+    for recupfin in recuperations_validees:
+        recupfin.date_fin = recupfin.date_debut + timedelta(days=float(recupfin.nombre_jours) - 1)
 
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
@@ -893,14 +933,17 @@ def dashboard_dp(request):
         'absences_planifiees': absences_planifiees,
         'absences_a_valider_dp': absences_a_valider_dp,
         'absences_validees': absences_validees,
+        'recuperations_validees': recuperations_validees,
         'recuperation': recuperation,
         'mois_list': mois_list,
         'mois_selectionne': mois_selectionne,
         'types': types,
         'type_selectionne': int(type_id) if type_id else None,
+        'historiques': historiques,
+        'recuperations': recuperations,
+        'page_obj': page_obj,
     }
     return render(request, 'dashboard/dp.html', context)
-
 
 
 # -----------------------------

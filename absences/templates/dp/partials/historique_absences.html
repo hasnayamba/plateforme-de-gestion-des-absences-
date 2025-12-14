@@ -1,0 +1,84 @@
+
+
+
+<table class="table table-bordered table-striped table-sm">
+  <thead class="table-dark">
+    <tr>
+      <th>Collaborateur</th>
+      <th>Type</th>
+      <th>Nature</th>
+      <th>Date création</th>
+      <th>Date validation</th>
+      <th>Statut</th>
+      <th>Décision</th>
+      <th>Rôle</th>
+      <th>Date début</th>
+      <th>Date fin</th>
+      <th>Jours</th>
+    </tr>
+  </thead>
+
+<tbody>
+
+<!-- ================= ABSENCES ================= -->
+{% for h in historiques %}
+<tr>
+  <td>{{ h.absence.collaborateur.get_full_name }}</td>
+  <td>Absence</td>
+  <td>{{ h.absence.type_absence.nom }}</td>
+  <td>{{ h.absence.date_creation|date:"d/m/Y H:i" }}</td>
+  <td>{{ h.date_validation|date:"d/m/Y H:i" }}</td>
+
+  <td>
+    {% if h.decision == 'rejeter' %}
+      <span class="badge bg-danger">Rejetée</span>
+    {% else %}
+      <span class="badge bg-success">Validée</span>
+    {% endif %}
+  </td>
+
+  <td>{{ h.decision }}</td>
+  <td>{{ h.role_valide }}</td>
+  <td>{{ h.absence.date_debut }}</td>
+  <td>{{ h.absence.date_fin }}</td>
+  <td>{{ h.absence.nombre_jours }}</td>
+</tr>
+{% endfor %}
+
+<!-- ================= RÉCUPÉRATIONS ================= -->
+{% for r in recuperations %}
+<tr class="table-info">
+  <td>{{ r.utilisateur.get_full_name }}</td>
+  <td>Récupération</td>
+  <td>-</td>
+  <td>{{ r.date_soumission|date:"d/m/Y H:i" }}</td>
+  <td>-</td>
+
+  <td>
+    {% if r.statut == 'valide' %}
+      <span class="badge bg-success">Validée</span>
+    {% elif r.statut == 'annulee' %}
+      <span class="badge bg-danger">Annulée</span>
+    {% else %}
+      <span class="badge bg-warning text-dark">En attente</span>
+    {% endif %}
+  </td>
+
+  <td>{{ r.statut }}</td>
+  <td>-</td>
+  <td>{{ r.date_debut }}</td>
+  <td>{{ r.date_fin }}</td>
+  <td>{{ r.nombre_jours }}</td>
+</tr>
+{% endfor %}
+
+{% if historiques|length == 0 and recuperations|length == 0 %}
+<tr>
+  <td colspan="11" class="text-center">Aucune donnée disponible</td>
+</tr>
+{% endif %}
+
+</tbody>
+
+
+</table>

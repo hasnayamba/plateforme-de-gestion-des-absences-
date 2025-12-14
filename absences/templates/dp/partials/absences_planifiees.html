@@ -26,6 +26,7 @@
       <tr>
         <th>Collaborateur</th>
         <th>Type</th>
+        <th>Date Soumission</th>
         <th>Dates</th>
         <th>Durée</th>
         <th>Statut</th>
@@ -36,6 +37,7 @@
         <tr>
           <td>{{ absence.collaborateur.get_full_name }}</td>
           <td>{{ absence.type_absence.nom }}</td>
+           <td>{{ absence.date_creation }}</td>
           <td>{{ absence.date_debut|date:"d/m/Y" }} → {{ absence.date_fin|date:"d/m/Y" }}</td>
           <td>{{ absence.nombre_jours }} jrs</td>
           <td>

@@ -1,19 +1,35 @@
 <div class="row">
   {% for numero, nom in mois_list %}
-  <div class="col-md-4 mb-3">
-    <div class="card">
-      <div class="card-header bg-light">
-        <strong>{{ nom }}</strong>
+  <div class="col-md-4 mb-4">
+    <div class="card border-light shadow-sm">
+      <div class="card-header bg-white text-center fw-bold">
+        {{ nom }}
       </div>
-      <div class="card-body">
+      <div class="card-body p-2">
         {% for absence in absences_validees %}
           {% if absence.date_debut.month == numero %}
-            <p><strong>{{ absence.collaborateur.get_full_name }}</strong><br>
-              {{ absence.type_absence.nom }} : {{ absence.date_debut }} → {{ absence.date_fin }}</p>
+            <span class="d-block mb-1 p-2 text-white rounded" 
+                  style="background-color: {{ absence.type_absence.couleur }};">
+                   {{ absence.type_absence.nom }} - {{ absence.collaborateur.get_full_name }}
+            </span>            
+              <small class="d-block">{{ absence.date_debut }} → {{ absence.date_fin }}</small>
+            
           {% endif %}
-        {% empty %}
-          <p>Aucune absence</p>
         {% endfor %}
+
+        {% for recup in recuperations_validees %}
+          {% if recup.date_debut.month == numero %}
+            <span class="d-block mb-1 p-2 text-white rounded" style="background-color:#28a745;">
+              {{ recup.utilisateur.get_full_name }} - Récupération
+             </span>
+              <small class="d-block">{{ recup.date_debut }} → {{ recup.date_fin }}</small>
+           
+          {% endif %}
+        {% endfor %}
+
+        {% if not absences_validees|dictsort:"date_debut"|first and not recuperations_validees|dictsort:"date_debut"|first %}
+          <p class="text-muted small">Aucune absence ou récupération</p>
+        {% endif %}
       </div>
     </div>
   </div>
