@@ -43,7 +43,7 @@
               <form method="post" style="display:inline;">
                 {% csrf_token %}
                 <input type="hidden" name="absence_id" value="{{ absence.id }}">
-                <button name="decision" value="approuve_superieur" class="btn btn-success btn-sm">Valider</button>
+                <button name="decision" value="valider" class="btn btn-success btn-sm">Valider</button>
               </form>
 
               <!-- Rejeter -->
