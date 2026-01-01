@@ -116,7 +116,7 @@
 </td>
 
 <td>
-{% if a.statut == 'valide_dp' %}
+{% if a.id in absences_annulables_ids %}
   <button class="btn btn-outline-danger btn-sm"
           data-bs-toggle="modal"
           data-bs-target="#modalAnnulerDrh{{ a.id }}">
@@ -125,6 +125,7 @@
 {% else %}
   —
 {% endif %}
+
 </td>
 
 </tr>
@@ -162,7 +163,7 @@
 <tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Action</th></tr>
 </thead>
 <tbody>
-{% for absence in absences %}
+{% for absence in absences_annulables %}
 <tr>
 <td>{{ absence.collaborateur.get_full_name }}</td>
 <td>{{ absence.type_absence.nom }}</td>
@@ -196,9 +197,30 @@
     {% for row in quota_rows %}
     <tr>
       <td>{{ row.user.get_full_name }}</td>
-      {% for q in row.quotas %}
-        <td>{{ q|default:"—" }}</td>
+           {% for q in row.quotas %}
+      <td>
+        {% if q is not None %}
+          <strong>{{ q.jours_disponibles }}</strong>
+
+          <form method="post" action="{% url 'mettre_a_jour_quota' q.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="operation" value="ajouter">
+            <input type="hidden" name="jours" value="1">
+            <button class="btn btn-success btn-sm">+</button>
+          </form>
+
+          <form method="post" action="{% url 'mettre_a_jour_quota' q.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="operation" value="reduire">
+            <input type="hidden" name="jours" value="1">
+            <button class="btn btn-danger btn-sm">−</button>
+          </form>
+        {% else %}
+          —
+        {% endif %}
+      </td>
       {% endfor %}
+
     </tr>
     {% endfor %}
     </tbody>
@@ -312,9 +334,8 @@
 </div>
 
 {% endfor %}
-{% for absence in absences_supervision %}
+{% for absence in absences_annulables %}
 {% if absence.statut == 'valide_dp' %}
-
 <div class="modal fade" id="modalAnnulerDrh{{ absence.id }}" tabindex="-1">
   <div class="modal-dialog">
     <form method="post" action="{% url 'annuler_absence_drh' absence.id %}">

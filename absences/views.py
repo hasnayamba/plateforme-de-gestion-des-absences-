@@ -657,6 +657,9 @@ def dashboard_drh(request):
     
     annee_courante = date.today().year
     annee_precedente = annee_courante - 1
+    absences_annulables_ids = set(
+    Absence.objects.filter(statut='valide_dp').values_list('id', flat=True))
+    absences_annulables = Absence.objects.filter(statut='valide_dp')
 
     # -------------------------
     # FILTRES (Suivi & Historique)
@@ -752,7 +755,7 @@ def dashboard_drh(request):
                 type_absence=t,
                 annee=annee_courante
             ).first()
-            quotas_ligne.append(quota.jours_disponibles if quota else None)
+            quotas_ligne.append(quota)
 
         quota_rows.append({
             'user': user,
@@ -768,6 +771,8 @@ def dashboard_drh(request):
 
     context = {
         'absences_a_verifier': absences_a_verifier,
+        'absences_annulables': absences_annulables,
+        'absences_annulables_ids': absences_annulables_ids,
         'absences_supervision': absences_supervision,
         'absences': absences_filtrees,
         'historiques': historiques,
