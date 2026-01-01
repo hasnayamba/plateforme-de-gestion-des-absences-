@@ -692,12 +692,14 @@ def dashboard_drh(request):
     # -------------------------
     # SUPERVISION + ANNULATIONS DRH
     # -------------------------
-    collaborateurs = Profile.objects.filter(
-        superieur=request.user
+    collaborateurs_sous_drh = Profile.objects.filter(
+        superieur=request.user,
+        role='collaborateur'
     ).values_list('user', flat=True)
 
     absences_supervision = Absence.objects.filter(
-        collaborateur__in=collaborateurs
+        collaborateur__in=collaborateurs_sous_drh,
+        statut='verifie_drh'
     ).select_related('collaborateur', 'type_absence').order_by('-date_debut')
 
     # -------------------------
