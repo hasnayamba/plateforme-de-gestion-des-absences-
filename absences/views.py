@@ -701,22 +701,30 @@ def dashboard_drh(request):
         'absence', 'utilisateur'
     ).order_by('-date_validation')
 
-    # -------------------------
-    # QUOTAS
-    # -------------------------
-    types = TypeAbsence.objects.all()
-    quotas = QuotaAbsence.objects.select_related('user', 'type_absence')
+# -------------------------
+# QUOTAS (PRÉPARÉS POUR TEMPLATE)
+# -------------------------
 
-    rows = {}
-    for q in quotas:
-        rows.setdefault(q.user, {})[q.type_absence] = q
+    types = list(TypeAbsence.objects.all())
+    users = User.objects.filter(profile__role='collaborateur')
 
     quota_rows = []
-    for user, data in rows.items():
+
+    for user in users:
+        quotas_ligne = []
+        for t in types:
+            quota = QuotaAbsence.objects.filter(
+                user=user,
+                type_absence=t,
+                annee=date.today().year
+            ).first()
+            quotas_ligne.append(quota.jours_disponibles if quota else None)
+
         quota_rows.append({
             'user': user,
-            'quotas': data
+            'quotas': quotas_ligne
         })
+
 
     # -------------------------
     # RÉCUPÉRATIONS
