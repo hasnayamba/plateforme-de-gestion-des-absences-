@@ -651,89 +651,97 @@ def rejeter_absence(request, absence_id):
 
 @login_required
 def dashboard_drh(request):
-    # --- Récupération des filtres
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Accès non autorisé.")
+        return redirect('login')
+
+    # -------------------------
+    # FILTRES (Suivi & Historique)
+    # -------------------------
     mois = request.GET.get('mois')
     type_id = request.GET.get('type')
     statut = request.GET.get('statut')
 
     filters = {}
     if mois:
-        try:
-            filters['date_debut__month'] = int(mois)
-        except ValueError:
-            pass
+        filters['date_debut__month'] = int(mois)
     if type_id:
-        try:
-            filters['type_absence_id'] = int(type_id)
-        except ValueError:
-            pass
+        filters['type_absence_id'] = int(type_id)
     if statut:
         filters['statut'] = statut
 
-    # --- Absences filtrées
-    absences = Absence.objects.select_related('collaborateur', 'type_absence').filter(**filters)
+    absences_filtrees = Absence.objects.select_related(
+        'collaborateur', 'type_absence'
+    ).prefetch_related(
+        'historiques'
+    ).filter(**filters).order_by('-date_debut')
 
-    # --- Types d'absence pour les colonnes
-    types = list(TypeAbsence.objects.all())
+    # -------------------------
+    # DEMANDES RH (à vérifier)
+    # -------------------------
+    absences_a_verifier = Absence.objects.filter(
+        statut='en_attente'
+    ).select_related('collaborateur', 'type_absence')
 
-    # --- Quotas
-    quota_qs = QuotaAbsence.objects.select_related('user', 'type_absence').order_by('user__last_name')
-    quota_map = {}
-    users_ordered = OrderedDict()
-    for q in quota_qs:
-        quota_map[(q.user_id, q.type_absence_id, q.annee)] = q
-        if q.user_id not in users_ordered:
-            users_ordered[q.user_id] = q.user
+    # -------------------------
+    # SUPERVISION + ANNULATIONS DRH
+    # -------------------------
+    collaborateurs = Profile.objects.filter(
+        superieur=request.user
+    ).values_list('user', flat=True)
 
-    # Construire les lignes pour le tableau de quotas
-    rows = []
-    for user in users_ordered.values():
-        cells = []
-        for t in types:
-            # On prend le quota pour l'année courante
-            annee_courante = Absence.objects.first().date_debut.year if Absence.objects.exists() else 2025
-            q = quota_map.get((user.id, t.id, annee_courante))
-            if q:
-                cells.append({
-                    'quota': q,
-                    'jours': q.jours_disponibles,
-                    'url': reverse('mettre_a_jour_quota', args=[q.id]),
-                    'type_name': t.nom,
-                })
-            else:
-                cells.append({'quota': None, 'type_name': t.nom})
-        rows.append({'user': user, 'cells': cells})
-
-    # --- Pré-calcul des quotas pour les absences à vérifier
-    absences_a_verifier = Absence.objects.filter(statut='en_attente').select_related('collaborateur', 'type_absence')
-    for absence in absences_a_verifier:
-        key = (absence.collaborateur.id, absence.type_absence.id, absence.date_debut.year)
-        absence.quota_disponible = quota_map.get(key)
-        
-   # --- Collaborateurs sous supervision (rôle supérieur) ---
-    collaborateurs_rh = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
-    absences_sous_supervision = Absence.objects.filter(
-        collaborateur__in=collaborateurs_rh
+    absences_supervision = Absence.objects.filter(
+        collaborateur__in=collaborateurs
     ).select_related('collaborateur', 'type_absence').order_by('-date_debut')
 
-    # --- Contexte
+    # -------------------------
+    # HISTORIQUE GLOBAL
+    # -------------------------
+    historiques = ValidationHistorique.objects.select_related(
+        'absence', 'utilisateur'
+    ).order_by('-date_validation')
+
+    # -------------------------
+    # QUOTAS
+    # -------------------------
+    types = TypeAbsence.objects.all()
+    quotas = QuotaAbsence.objects.select_related('user', 'type_absence')
+
+    rows = {}
+    for q in quotas:
+        rows.setdefault(q.user, {})[q.type_absence] = q
+
+    quota_rows = []
+    for user, data in rows.items():
+        quota_rows.append({
+            'user': user,
+            'quotas': data
+        })
+
+    # -------------------------
+    # RÉCUPÉRATIONS
+    # -------------------------
+    recuperations = Recuperation.objects.select_related(
+        'utilisateur'
+    ).order_by('-date_soumission')
+
     context = {
         'absences_a_verifier': absences_a_verifier,
-        'absences_sous_supervision': absences_sous_supervision,
-        'absences_validees': Absence.objects.filter(statut='valide_dp'),
-        'absences': absences,
-        'historiques': ValidationHistorique.objects.select_related('absence', 'utilisateur').order_by('-date_validation'),
+        'absences_supervision': absences_supervision,
+        'absences': absences_filtrees,
+        'historiques': historiques,
         'types': types,
-        'rows': rows,
+        'quota_rows': quota_rows,
+        'recuperations': recuperations,
+        'absence_statuts': STATUT_ABSENCE,
         'mois_list': [(i, month_name[i]) for i in range(1, 13)],
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
         'statut_selectionne': statut,
-        'absence_statuts': STATUT_ABSENCE,
-        'recuperations': Recuperation.objects.select_related('utilisateur').order_by('-date_soumission'),
     }
 
     return render(request, 'dashboard/drh.html', context)
+
 
 @login_required
 def valider_recuperation(request, recuperation_id):
@@ -1013,25 +1021,59 @@ def rejeter_absence_dp(request, absence_id):
 
 
 @login_required
-def annuler_absence_dp(request, absence_id):
+def annuler_absence_drh(request, absence_id):
+    # Sécurité DRH
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
     absence = get_object_or_404(Absence, id=absence_id)
 
-    if absence.valide_par_dp:
-        absence.valide_par_dp = False
-        absence.statut = 'en_attente'  # ou 'approuve_superieur' si tu veux conserver l'approbation
-        absence.save()
+    if request.method != 'POST':
+        return redirect('dashboard_drh')
 
-        ValidationHistorique.objects.create(
-            absence=absence,
-            utilisateur=request.user,
-            role_valide='dp',
-            decision='annuler',
-            motif='Annulation par DP'
-        )
-        messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été annulée.")
-    else:
-        messages.error(request, "Impossible d'annuler une absence non validée par le DP.")
-    return redirect('dashboard_dp')
+    motif = request.POST.get('motif', '').strip()
+    if not motif:
+        messages.error(request, "Motif obligatoire.")
+        return redirect('dashboard_drh')
+
+    # =========================
+    # 1️⃣ HISTORIQUE (AVANT DELETE)
+    # =========================
+    ValidationHistorique.objects.create(
+        absence=absence,
+        utilisateur=request.user,
+        role_valide='drh',
+        decision='annulation_drh',
+        motif=motif
+    )
+
+    # =========================
+    # 2️⃣ RÉTABLIR LE QUOTA SI VALIDÉ DP
+    # =========================
+    if absence.statut == 'valide_dp':
+        try:
+            quota = QuotaAbsence.objects.get(
+                user=absence.collaborateur,
+                type_absence=absence.type_absence,
+                annee=absence.date_debut.year
+            )
+            quota.jours_disponibles += absence.nombre_jours
+            quota.save()
+        except QuotaAbsence.DoesNotExist:
+            pass  # sécurité
+
+    # =========================
+    # 3️⃣ HARD DELETE
+    # =========================
+    absence.delete()
+
+    messages.success(
+        request,
+        "Absence annulée définitivement par la DRH. Les dates sont à nouveau disponibles."
+    )
+
+    return redirect('dashboard_drh')
 
 
 # -----------------------------
