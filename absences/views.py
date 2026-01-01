@@ -36,6 +36,7 @@ from django.urls import reverse
 from .models import Recuperation
 from django.http import HttpResponse
 import csv
+import math
 
 
 
@@ -328,8 +329,32 @@ def soumettre_absence(request, absence_id=None):
             absence.statut = 'en_attente'  # repasse à l’état initial
             if justificatif:
                 absence.justificatif = justificatif
+            # Vérification de chevauchement                 
+            jours_calendaires = math.ceil(nombre_jours_float)
+            date_fin_tmp = date_debut_obj + timedelta(days=jours_calendaires - 1)
+            chevauchement = Absence.objects.filter(
+                collaborateur=request.user,
+                date_debut__lte=date_fin_tmp,
+                date_fin__gte=date_debut_obj,
+                statut__in=['en_attente', 'approuve_superieur', 'verifie_drh', 'valide_dp']
+            )
 
-            absence.full_clean()
+            if absence:
+                chevauchement = chevauchement.exclude(id=absence.id)
+
+            if chevauchement.exists():
+                messages.error(
+                    request,
+                    "Une autre absence (active) chevauche déjà cette période."
+                )
+                return render(request, 'collaborateur/soumettre_absence.html', {
+                    'types_absence': types_absence,
+                    'jours_feries': jours_feries,
+                    'absence': absence,
+                    'form_data': form_data,
+                })
+
+            
             absence.save()
 
             ValidationHistorique.objects.create(
@@ -351,7 +376,7 @@ def soumettre_absence(request, absence_id=None):
                 justificatif=justificatif,
                 statut='en_attente'
             )
-            absence.full_clean()
+         
             absence.save()
             messages.success(request, "Demande d’absence soumise avec succès.")
 
@@ -366,30 +391,6 @@ def soumettre_absence(request, absence_id=None):
     })
 
   
-# -----------------------------
-# Soummettre une récupération
-# -----------------------------  
-
-
-@login_required
-def soumettre_recuperation(request):
-    if request.method == "POST":
-        motif = request.POST.get("motif")
-        justificatif = request.FILES.get("justificatif")
-        date_debut = request.POST.get("date_debut")
-        nombre_jours = request.POST.get("nombre_jours")
-
-        Recuperation.objects.create(
-            utilisateur=request.user,
-            motif=motif,
-            justificatif=justificatif,
-            date_debut=date_debut,
-            nombre_jours=nombre_jours,
-        )
-        messages.success(request, "Récupération soumise avec succès.")
-        return redirect('dashboard_collaborateur')  
-  
-    
 # -----------------------------
 # Annuler une absence
 # -----------------------------
@@ -609,10 +610,14 @@ def approuver_absence(request, absence_id):
     ValidationHistorique.objects.create(
         absence=absence,
         utilisateur=request.user,
+        role_valide=request.user.profile.role,
         decision='approuve_par_superieur',
         motif="Approuvé par le supérieur"
     )
-    return redirect('dashboard_superieur')
+    if request.user.profile.role == 'drh':
+        return redirect('dashboard_drh')
+    else:
+        return redirect('dashboard_superieur')
 
 
 # -----------------------------
@@ -1400,3 +1405,48 @@ def annuler_recuperation(request, recup_id):
 
     return render(request, 'collaborateur/annuler_recuperation.html', {'recup': recup})
 
+
+@login_required
+def annuler_absence_drh(request, absence_id):
+    absence = get_object_or_404(Absence, id=absence_id)
+
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
+    if request.method == 'POST':
+        motif = request.POST.get('motif', '').strip()
+        if not motif:
+            messages.error(request, "Motif obligatoire.")
+            return redirect('dashboard_drh')
+
+        # 🔁 Rétablir le quota si déjà validée DP
+        if absence.statut == 'valide_dp':
+            try:
+                quota = QuotaAbsence.objects.get(
+                    user=absence.collaborateur,
+                    type_absence=absence.type_absence,
+                    annee=absence.date_debut.year
+                )
+                quota.jours_disponibles += absence.nombre_jours
+                quota.save()
+            except QuotaAbsence.DoesNotExist:
+                pass
+
+        absence.statut = 'annulee'
+        absence.valide_par_dp = False
+        absence.verifie_par_drh = False
+        absence.approuve_par_superieur = False
+        absence.motif_annulation = motif
+        absence.save()
+
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            role_valide='drh',
+            decision='annulation_forcee',
+            motif=motif
+        )
+
+        messages.success(request, "Absence annulée par la DRH.")
+        return redirect('dashboard_drh')

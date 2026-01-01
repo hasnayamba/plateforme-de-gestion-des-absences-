@@ -240,15 +240,58 @@
               {% if absence.justificatif %}<a href="{% url 'telecharger_justificatif' r.justificatif.name %}" target="_blank">📂 Voir PDF</a>{% else %}—{% endif %}</td>
             <td>
               {% if absence.statut == 'verifie_drh' %}
-                <form method="post" action="{% url 'approuver_absence' absence.id %}" style="display:inline;">{% csrf_token %}
+                <!-- Approver (Supérieur ou DRH) -->
+                <form method="post" action="{% url 'approuver_absence' absence.id %}" style="display:inline;">
+                  {% csrf_token %}
                   <button type="submit" class="btn btn-success btn-sm">Approuver</button>
                 </form>
-                <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejeterSup{{ absence.id }}">Rejeter</button>
+
+                <!-- Rejeter -->
+                <button class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalRejeterSup{{ absence.id }}">Rejeter</button>
+
+              {% elif absence.statut == 'valide_dp' %}
+                <!-- 🔥 ANNULATION DRH APRÈS DP -->
+                <button class="btn btn-outline-danger btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalAnnulerDrh{{ absence.id }}">
+                  Annuler (DRH)
+                </button>
+
               {% else %}
                 <span class="text-muted">—</span>
               {% endif %}
+
             </td>
           </tr>
+
+          <!-- Modal Annulation DRH -->
+          <div class="modal fade" id="modalAnnulerDrh{{ absence.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <form method="post" action="{% url 'annuler_absence_drh' absence.id %}">
+                {% csrf_token %}
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Annuler l’absence (DRH)</h5>
+                  </div>
+                  <div class="modal-body">
+                    <p>
+                      <strong>{{ absence.collaborateur.get_full_name }}</strong><br>
+                      {{ absence.type_absence.nom }} :
+                      {{ absence.date_debut }} → {{ absence.date_fin }}
+                    </p>
+                    <label>Motif d’annulation :</label>
+                    <textarea name="motif" class="form-control" required></textarea>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Confirmer l’annulation</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
 
           <!-- Modal Rejet Supérieur -->
           <div class="modal fade" id="modalRejeterSup{{ absence.id }}" tabindex="-1">
