@@ -90,7 +90,15 @@
 
 <table class="table table-sm table-hover">
 <thead class="table-light">
-<tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Historique</th></tr>
+<tr>
+  <th>Nom</th>
+  <th>Type</th>
+  <th>Dates</th>
+  <th>Statut</th>
+  <th>Historique</th>
+  <th>Action</th>
+</tr>
+
 </thead>
 <tbody>
 {% for a in absences %}
@@ -100,8 +108,25 @@
 <td>{{ a.date_debut }} → {{ a.date_fin }}</td>
 <td>{{ a.get_statut_display }}</td>
 <td>
-<button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#hist{{ a.id }}">Voir</button>
+  <button class="btn btn-outline-info btn-sm"
+          data-bs-toggle="modal"
+          data-bs-target="#hist{{ a.id }}">
+    Voir
+  </button>
 </td>
+
+<td>
+{% if a.statut == 'valide_dp' %}
+  <button class="btn btn-outline-danger btn-sm"
+          data-bs-toggle="modal"
+          data-bs-target="#modalAnnulerDrh{{ a.id }}">
+    ❌ Annuler (DRH)
+  </button>
+{% else %}
+  —
+{% endif %}
+</td>
+
 </tr>
 
 <div class="modal fade" id="hist{{ a.id }}">
@@ -137,7 +162,7 @@
 <tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Action</th></tr>
 </thead>
 <tbody>
-{% for absence in absences_supervision %}
+{% for absence in absences %}
 <tr>
 <td>{{ absence.collaborateur.get_full_name }}</td>
 <td>{{ absence.type_absence.nom }}</td>

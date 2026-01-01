@@ -654,6 +654,9 @@ def dashboard_drh(request):
     if request.user.profile.role != 'drh':
         messages.error(request, "Accès non autorisé.")
         return redirect('login')
+    
+    annee_courante = date.today().year
+    annee_precedente = annee_courante - 1
 
     # -------------------------
     # FILTRES (Suivi & Historique)
@@ -700,11 +703,42 @@ def dashboard_drh(request):
     historiques = ValidationHistorique.objects.select_related(
         'absence', 'utilisateur'
     ).order_by('-date_validation')
+    
+    # =========================
+# REPORT AUTOMATIQUE DES QUOTAS (UNE SEULE FOIS)
+# =========================
+    users = User.objects.filter(profile__role='collaborateur')
+    types = TypeAbsence.objects.all()
 
-# -------------------------
-# QUOTAS (PRÉPARÉS POUR TEMPLATE)
-# -------------------------
+    for user in users:
+        for t in types:
+            quota_ancien = QuotaAbsence.objects.filter(
+                user=user,
+                type_absence=t,
+                annee=annee_precedente
+            ).first()
 
+            # Rien à reporter
+            if not quota_ancien or quota_ancien.jours_disponibles <= 0:
+                continue
+
+            quota_nouveau, created = QuotaAbsence.objects.get_or_create(
+                user=user,
+                type_absence=t,
+                annee=annee_courante,
+                defaults={
+                    'jours_disponibles': quota_ancien.jours_disponibles
+                }
+            )
+
+            # Si le quota 2026 existe déjà → on ne reporte pas
+            if not created:
+                continue
+
+
+# =========================
+# QUOTAS À AFFICHER (ANNÉE COURANTE UNIQUEMENT)
+# =========================
     types = list(TypeAbsence.objects.all())
     users = User.objects.filter(profile__role='collaborateur')
 
@@ -716,7 +750,7 @@ def dashboard_drh(request):
             quota = QuotaAbsence.objects.filter(
                 user=user,
                 type_absence=t,
-                annee=date.today().year
+                annee=annee_courante
             ).first()
             quotas_ligne.append(quota.jours_disponibles if quota else None)
 
@@ -724,7 +758,6 @@ def dashboard_drh(request):
             'user': user,
             'quotas': quotas_ligne
         })
-
 
     # -------------------------
     # RÉCUPÉRATIONS
