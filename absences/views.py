@@ -693,14 +693,16 @@ def dashboard_drh(request):
     # SUPERVISION + ANNULATIONS DRH
     # -------------------------
     collaborateurs_sous_drh = Profile.objects.filter(
-        superieur=request.user,
-        role='collaborateur'
-    ).values_list('user', flat=True)
+    superieur=request.user,
+    role='collaborateur'
+).values_list('user', flat=True)
 
     absences_supervision = Absence.objects.filter(
         collaborateur__in=collaborateurs_sous_drh,
         statut='verifie_drh'
-    ).select_related('collaborateur', 'type_absence').order_by('-date_debut')
+    ).select_related(
+        'collaborateur', 'type_absence'
+    ).order_by('-date_debut')
 
     # -------------------------
     # HISTORIQUE GLOBAL
@@ -757,7 +759,11 @@ def dashboard_drh(request):
                 type_absence=t,
                 annee=annee_courante
             ).first()
-            quotas_ligne.append(quota)
+            quotas_ligne.append({
+            'type': t,
+            'quota': quota
+        })
+
 
         quota_rows.append({
             'user': user,
@@ -1494,3 +1500,56 @@ def annuler_recuperation(request, recup_id):
         return redirect('mes_absences')
 
     return render(request, 'collaborateur/annuler_recuperation.html', {'recup': recup})
+
+@login_required
+def ajuster_quota(request):
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
+    if request.method != 'POST':
+        return redirect('dashboard_drh')
+
+    user_id = request.POST.get('user_id')
+    type_id = request.POST.get('type_id')
+    operation = request.POST.get('operation')
+    jours_str = request.POST.get('jours')
+
+    if not all([user_id, type_id, operation, jours_str]):
+        messages.error(request, "Données incomplètes.")
+        return redirect('dashboard_drh')
+
+    try:
+        jours = Decimal(jours_str)
+        if jours <= 0:
+            raise ValueError
+    except Exception:
+        messages.error(request, "Nombre de jours invalide.")
+        return redirect('dashboard_drh')
+
+    user = get_object_or_404(User, id=user_id)
+    type_absence = get_object_or_404(TypeAbsence, id=type_id)
+    annee = date.today().year
+
+    quota, created = QuotaAbsence.objects.get_or_create(
+        user=user,
+        type_absence=type_absence,
+        annee=annee,
+        defaults={'jours_disponibles': Decimal("0.00")}
+    )
+
+    if operation == 'ajouter':
+        quota.jours_disponibles += jours
+        messages.success(request, f"{jours} jour(s) ajoutés.")
+    elif operation == 'reduire':
+        if jours > quota.jours_disponibles:
+            messages.error(request, "Impossible de réduire au-delà du quota disponible.")
+            return redirect('dashboard_drh')
+        quota.jours_disponibles -= jours
+        messages.success(request, f"{jours} jour(s) réduits.")
+    else:
+        messages.error(request, "Opération invalide.")
+        return redirect('dashboard_drh')
+
+    quota.save()
+    return redirect('dashboard_drh')

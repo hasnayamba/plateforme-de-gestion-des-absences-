@@ -45,6 +45,8 @@ urlpatterns = [
     path("drh/absence/<int:absence_id>/modifier/", views.modifier_absence_drh, name="modifier_absence_drh"),
     path('drh/recuperation/<int:recuperation_id>/valider/', views.valider_recuperation, name='valider_recuperation'),
     path("drh/absences/<int:absence_id>/annuler/",views.annuler_absence_drh,name="annuler_absence_drh"),
+    path("drh/quotas/ajuster/", views.ajuster_quota, name="ajuster_quota"),
+
 
 
 

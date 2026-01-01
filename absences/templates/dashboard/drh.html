@@ -163,7 +163,7 @@
 <tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Action</th></tr>
 </thead>
 <tbody>
-{% for absence in absences_annulables %}
+{% for absence in absences_supervision %}
 <tr>
 <td>{{ absence.collaborateur.get_full_name }}</td>
 <td>{{ absence.type_absence.nom }}</td>
@@ -205,35 +205,38 @@
   </td>
 
   <!-- Quotas par type -->
-  {% for q in row.quotas %}
-  <td class="text-center">
-    {% if q is not None %}
-      <strong>{{ q.jours_disponibles }}</strong>
+{% for item in row.quotas %}
+{% with q=item.quota t=item.type %}
 
-      <form method="post"
-            action="{% url 'mettre_a_jour_quota' q.id %}"
-            class="d-inline">
-        {% csrf_token %}
-        <input type="hidden" name="operation" value="ajouter">
-        <input type="hidden" name="jours" value="1">
-        <button class="btn btn-success btn-sm">+</button>
-      </form>
+<td class="text-center">
+  {% if q %}
+    <strong>{{ q.jours_disponibles }}</strong>
+  {% else %}
+    <strong>0</strong>
+  {% endif %}
 
-      <form method="post"
-            action="{% url 'mettre_a_jour_quota' q.id %}"
-            class="d-inline">
-        {% csrf_token %}
-        <input type="hidden" name="operation" value="reduire">
-        <input type="hidden" name="jours" value="1">
-        <button class="btn btn-danger btn-sm">−</button>
-      </form>
-    {% else %}
-      —
-    {% endif %}
-  </td>
-  {% endfor %}
-</tr>
+  <form method="post" action="{% url 'ajuster_quota' %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="user_id" value="{{ row.user.id }}">
+    <input type="hidden" name="type_id" value="{{ t.id }}">
+    <input type="hidden" name="operation" value="ajouter">
+    <input type="hidden" name="jours" value="1">
+    <button class="btn btn-success btn-sm">+</button>
+  </form>
+
+  <form method="post" action="{% url 'ajuster_quota' %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="user_id" value="{{ row.user.id }}">
+    <input type="hidden" name="type_id" value="{{ t.id }}">
+    <input type="hidden" name="operation" value="reduire">
+    <input type="hidden" name="jours" value="1">
+    <button class="btn btn-danger btn-sm">−</button>
+  </form>
+</td>
+{% endwith %}
+
 {% endfor %}
+
 </tbody>
 
 
@@ -373,7 +376,7 @@
 </div>
 
 {% endfor %}
-{% for absence in absences_annulables %}
+{% for absence in absences_supervision %}
 {% if absence.statut == 'valide_dp' %}
 <div class="modal fade" id="modalAnnulerDrh{{ absence.id }}" tabindex="-1">
   <div class="modal-dialog">
