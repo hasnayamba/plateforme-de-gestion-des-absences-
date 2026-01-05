@@ -738,7 +738,7 @@ def dashboard_drh(request):
     # =========================
     users = (
         User.objects
-        .filter(profile__role__in=['collaborateur', 'superieur'])
+        .filter(profile__role__in=['collaborateur', 'superieur', 'drh', 'dp'])
         .order_by('last_name', 'first_name')
     )
 
