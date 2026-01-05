@@ -4,16 +4,17 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-<h2 class="mb-4">📋 Tableau de bord – DRH</h2>
+
+<h2 class="mb-3">📋 Tableau de bord – DRH</h2>
 
 <a href="{% url 'configuration_view' %}" class="btn btn-outline-info">⚙️ Configuration</a>
 <a href="{% url 'admin_users' %}" class="btn btn-outline-primary">👥 Gérer les utilisateurs</a>
-<br><br>
+
+<hr>
 
 <ul class="nav nav-tabs mb-3">
   <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#demandes">📥 Demandes RH</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#suivi">📊 Suivi & Historique</a></li>
-  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#collabs">🧑‍💼 Collaborateurs</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#quotas">📈 Quotas</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#recups">🔄 Récupérations</a></li>
 </ul>
@@ -24,34 +25,40 @@
 <!-- DEMANDES RH -->
 <!-- ================================================= -->
 <div class="tab-pane fade show active" id="demandes">
+
 <table class="table table-bordered table-sm">
 <thead class="table-light">
 <tr>
-  <th>Nom</th><th>Type</th><th>Dates</th><th>Jours</th><th>Actions</th>
+  <th>Collaborateur</th>
+  <th>Type</th>
+  <th>Dates</th>
+  <th>Jours</th>
+  <th>Actions</th>
 </tr>
 </thead>
 <tbody>
-{% for absence in absences_a_verifier %}
+
+{% for a in absences_a_verifier %}
 <tr>
-<td>{{ absence.collaborateur.get_full_name }}</td>
-<td>{{ absence.type_absence.nom }}</td>
-<td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
-<td>{{ absence.nombre_jours }}</td>
+<td>{{ a.collaborateur.get_full_name }}</td>
+<td>{{ a.type_absence.nom }}</td>
+<td>{{ a.date_debut }} → {{ a.date_fin }}</td>
+<td>{{ a.nombre_jours }}</td>
 <td>
-  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalVerifier{{ absence.id }}">Vérifier</button>
-  <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalAmeliorer{{ absence.id }}">Améliorer</button>
-  <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejeter{{ absence.id }}">Rejeter</button>
+  <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#verifier{{ a.id }}">✔ Vérifier</button>
+  <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejeter{{ a.id }}">✖ Rejeter</button>
 </td>
 </tr>
 {% empty %}
-<tr><td colspan="5" class="text-center">Aucune demande en attente.</td></tr>
+<tr><td colspan="5" class="text-center">Aucune demande en attente</td></tr>
 {% endfor %}
+
 </tbody>
 </table>
 </div>
 
 <!-- ================================================= -->
-<!-- SUIVI & HISTORIQUE (FUSION FILTRES + HISTO) -->
+<!-- SUIVI & HISTORIQUE -->
 <!-- ================================================= -->
 <div class="tab-pane fade" id="suivi">
 
@@ -91,93 +98,40 @@
 <table class="table table-sm table-hover">
 <thead class="table-light">
 <tr>
-  <th>Nom</th>
+  <th>Collaborateur</th>
+  <th>Soumise le</th>
   <th>Type</th>
   <th>Dates</th>
   <th>Statut</th>
   <th>Historique</th>
-  <th>Action</th>
+  <th>Action DRH</th>
 </tr>
-
 </thead>
 <tbody>
+
 {% for a in absences %}
 <tr>
 <td>{{ a.collaborateur.get_full_name }}</td>
+<td>{{ a.date_creation|date:"d/m/Y H:i" }}</td>
 <td>{{ a.type_absence.nom }}</td>
 <td>{{ a.date_debut }} → {{ a.date_fin }}</td>
 <td>{{ a.get_statut_display }}</td>
+
 <td>
-  <button class="btn btn-outline-info btn-sm"
-          data-bs-toggle="modal"
-          data-bs-target="#hist{{ a.id }}">
-    Voir
-  </button>
+<button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#hist{{ a.id }}">📜</button>
 </td>
 
 <td>
-{% if a.id in absences_annulables_ids %}
-  <button class="btn btn-outline-danger btn-sm"
-          data-bs-toggle="modal"
-          data-bs-target="#modalAnnulerDrh{{ a.id }}">
-    ❌ Annuler (DRH)
-  </button>
+{% if a.statut == 'valide_dp' %}
+<button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#annuler{{ a.id }}">❌ Annuler</button>
 {% else %}
-  —
+—
 {% endif %}
-
 </td>
-
 </tr>
 
-<div class="modal fade" id="hist{{ a.id }}">
-<div class="modal-dialog modal-lg">
-<div class="modal-content">
-<div class="modal-header"><h5>Historique</h5></div>
-<div class="modal-body">
-<ul class="list-group">
-{% for h in a.historiques.all %}
-<li class="list-group-item">
-<strong>{{ h.date_validation|date:"d/m/Y H:i" }}</strong> — {{ h.decision }} ({{ h.utilisateur.get_full_name }})<br>
-<small>{{ h.motif }}</small>
-</li>
-{% endfor %}
-</ul>
-</div>
-</div>
-</div>
-</div>
 {% empty %}
-<tr><td colspan="5" class="text-center">Aucune absence.</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-
-<!-- ================================================= -->
-<!-- COLLABORATEURS / ANNULATION DRH -->
-<!-- ================================================= -->
-<div class="tab-pane fade" id="collabs">
-<table class="table table-bordered table-sm">
-<thead class="table-light">
-<tr><th>Nom</th><th>Type</th><th>Dates</th><th>Statut</th><th>Action</th></tr>
-</thead>
-<tbody>
-{% for absence in absences_supervision %}
-<tr>
-<td>{{ absence.collaborateur.get_full_name }}</td>
-<td>{{ absence.type_absence.nom }}</td>
-<td>{{ absence.date_debut }} → {{ absence.date_fin }}</td>
-<td>{{ absence.get_statut_display }}</td>
-<td>
-  <button class="btn btn-success btn-sm"
-          data-bs-toggle="modal"
-          data-bs-target="#modalApprouverDrh{{ absence.id }}">
-    ✅ Approuver
-  </button>
-</td>
-
-</tr>
+<tr><td colspan="7" class="text-center">Aucune absence</td></tr>
 {% endfor %}
 </tbody>
 </table>
@@ -189,61 +143,47 @@
 <div class="tab-pane fade" id="quotas">
 <table class="table table-bordered table-sm">
 <thead class="table-light">
-<tr><th>Collaborateur</th>{% for t in types %}<th>{{ t.nom }}</th>{% endfor %}</tr>
+<tr>
+<th>Collaborateur</th>
+{% for t in types %}<th>{{ t.nom }}</th>{% endfor %}
+</tr>
 </thead>
-    <tbody>
+<tbody>
+
 {% for row in quota_rows %}
 <tr>
-  <!-- Collaborateur + historique -->
-  <td>
-    {{ row.user.get_full_name }}
-    <button class="btn btn-outline-info btn-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#histQuota{{ row.user.id }}">
-      📜
-    </button>
-  </td>
+<td>{{ row.user.get_full_name }}</td>
 
-  <!-- Quotas par type -->
 {% for item in row.quotas %}
-{% with q=item.quota t=item.type %}
-
 <td class="text-center">
-  {% if q %}
-    <strong>{{ q.jours_disponibles }}</strong>
-  {% else %}
-    <strong>0</strong>
-  {% endif %}
+<strong>{{ item.quota.jours_disponibles|default:0 }}</strong>
 
-  <form method="post" action="{% url 'ajuster_quota' %}" class="d-inline">
-    {% csrf_token %}
-    <input type="hidden" name="user_id" value="{{ row.user.id }}">
-    <input type="hidden" name="type_id" value="{{ t.id }}">
-    <input type="hidden" name="operation" value="ajouter">
-    <input type="hidden" name="jours" value="1">
-    <button class="btn btn-success btn-sm">+</button>
-  </form>
+<button
+  class="btn btn-success btn-sm ms-1"
+  data-bs-toggle="modal"
+  data-bs-target="#modalQuota"
+  data-user="{{ row.user.id }}"
+  data-type="{{ item.type.id }}"
+  data-operation="ajouter">
+  +
+</button>
 
-  <form method="post" action="{% url 'ajuster_quota' %}" class="d-inline">
-    {% csrf_token %}
-    <input type="hidden" name="user_id" value="{{ row.user.id }}">
-    <input type="hidden" name="type_id" value="{{ t.id }}">
-    <input type="hidden" name="operation" value="reduire">
-    <input type="hidden" name="jours" value="1">
-    <button class="btn btn-danger btn-sm">−</button>
-  </form>
+<button
+  class="btn btn-danger btn-sm ms-1"
+  data-bs-toggle="modal"
+  data-bs-target="#modalQuota"
+  data-user="{{ row.user.id }}"
+  data-type="{{ item.type.id }}"
+  data-operation="reduire">
+  −
+</button>
+
 </td>
-
-{% endwith %}
 {% endfor %}
 </tr>
 {% endfor %}
-</tbody>
-
 
 </tbody>
-
-
 </table>
 </div>
 
@@ -253,7 +193,12 @@
 <div class="tab-pane fade" id="recups">
 <table class="table table-bordered table-sm">
 <thead class="table-light">
-<tr><th>Nom</th><th>Date</th><th>Jours</th><th>Statut</th><th>Action</th></tr>
+<tr>
+<th>Collaborateur</th>
+<th>Date</th>
+<th>Jours</th>
+<th>Statut</th>
+</tr>
 </thead>
 <tbody>
 {% for r in recuperations %}
@@ -262,14 +207,23 @@
 <td>{{ r.date_debut }}</td>
 <td>{{ r.nombre_jours }}</td>
 <td>{{ r.statut }}</td>
+
 <td>
-{% if r.statut == 'en_attente' %}
-<a href="{% url 'valider_recuperation' r.id %}" class="btn btn-success btn-sm">Vérifier</a>
-{% else %}
-—
-{% endif %}
+  {% if r.statut == 'en_attente' %}
+    <button
+      class="btn btn-success btn-sm"
+      data-bs-toggle="modal"
+      data-bs-target="#verifierRecup{{ r.id }}">
+      ✔ Vérifier
+    </button>
+  {% else %}
+    —
+  {% endif %}
 </td>
+
 </tr>
+{% empty %}
+<tr><td colspan="4" class="text-center">Aucune récupération</td></tr>
 {% endfor %}
 </tbody>
 </table>
@@ -278,181 +232,180 @@
 </div>
 </div>
 
-<!-- ================= MODALES DRH ================= -->
-<!-- ================================================= -->
-<!-- MODALES DRH – DEMANDES À VÉRIFIER -->
-<!-- ================================================= -->
-{% for absence in absences_supervision %}
-<div class="modal fade" id="modalApprouverDrh{{ absence.id }}">
+{% for r in recuperations %}
+<div class="modal fade" id="verifierRecup{{ r.id }}" tabindex="-1">
   <div class="modal-dialog">
-    <form method="post" action="{% url 'approuver_absence' absence.id %}">
+    <form method="post" action="{% url 'valider_recuperation' r.id %}">
       {% csrf_token %}
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Approbation DRH (supérieur)</h5>
+          <h5 class="modal-title">Vérifier la récupération (RH)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+
         <div class="modal-body">
           <p>
-            <strong>{{ absence.collaborateur.get_full_name }}</strong><br>
-            {{ absence.type_absence.nom }}<br>
-            {{ absence.date_debut }} → {{ absence.date_fin }}
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-success">✅ Approuver</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-{% endfor %}
-
-
-{% for absence in absences_a_verifier %}
-
-<!-- ===== MODAL VÉRIFIER ===== -->
-<div class="modal fade" id="modalVerifier{{ absence.id }}" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'verifier_absence' absence.id %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Vérifier l’absence</h5>
-        </div>
-        <div class="modal-body">
-          <p><strong>{{ absence.collaborateur.get_full_name }}</strong></p>
-          <p>{{ absence.type_absence.nom }}</p>
-          <p>{{ absence.date_debut }} → {{ absence.date_fin }}</p>
-          <p><strong>{{ absence.nombre_jours }}</strong> jour(s)</p>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-success">✅ Vérifier</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ===== MODAL AMÉLIORER ===== -->
-<div class="modal fade" id="modalAmeliorer{{ absence.id }}" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'modifier_absence_drh' absence.id %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Demande d’amélioration</h5>
-        </div>
-        <div class="modal-body">
-          <label>Message à transmettre au collaborateur :</label>
-          <textarea name="commentaire" class="form-control" required></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-warning">Envoyer</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ===== MODAL REJETER ===== -->
-<div class="modal fade" id="modalRejeter{{ absence.id }}" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'rejeter_absence_drh' absence.id %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Rejeter l’absence</h5>
-        </div>
-        <div class="modal-body">
-          <label>Motif du rejet :</label>
-          <textarea name="commentaire" class="form-control" required></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-danger">Rejeter</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-{% endfor %}
-{% for absence in absences_supervision %}
-{% if absence.statut == 'valide_dp' %}
-<div class="modal fade" id="modalAnnulerDrh{{ absence.id }}" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'annuler_absence_drh' absence.id %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Annulation DRH (définitive)</h5>
-        </div>
-        <div class="modal-body">
-          <p>
-            <strong>{{ absence.collaborateur.get_full_name }}</strong><br>
-            {{ absence.type_absence.nom }}<br>
-            {{ absence.date_debut }} → {{ absence.date_fin }}
+            <strong>{{ r.utilisateur.get_full_name }}</strong><br>
+            Date : {{ r.date_debut }}<br>
+            Nombre de jours : {{ r.nombre_jours }}<br>
+            Motif : {{ r.motif }}
           </p>
 
-          <label>Motif d’annulation :</label>
-          <textarea name="motif" class="form-control" required></textarea>
-
-          <div class="alert alert-warning mt-3">
-            ⚠️ Cette action supprimera définitivement l’absence et rétablira le quota.
+          <div class="alert alert-info">
+            Cette action confirme la récupération et la transmet au Directeur Pays.
           </div>
         </div>
+
         <div class="modal-footer">
-          <button class="btn btn-danger">❌ Annuler définitivement</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          <button class="btn btn-success">✔ Confirmer</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+
+<!-- ================================================= -->
+<!-- ===================== MODALES ==================== -->
+<!-- ================================================= -->
+
+{% for a in absences_a_verifier %}
+<div class="modal fade" id="verifier{{ a.id }}">
+<div class="modal-dialog">
+<form method="post" action="{% url 'verifier_absence' a.id %}">
+{% csrf_token %}
+<div class="modal-content">
+<div class="modal-header"><h5>Vérifier l’absence</h5></div>
+<div class="modal-body">
+<strong>{{ a.collaborateur.get_full_name }}</strong><br>
+{{ a.type_absence.nom }}<br>
+{{ a.date_debut }} → {{ a.date_fin }}
+</div>
+<div class="modal-footer">
+<button class="btn btn-success">✔ Confirmer</button>
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+
+<div class="modal fade" id="rejeter{{ a.id }}">
+<div class="modal-dialog">
+<form method="post" action="{% url 'rejeter_absence_drh' a.id %}">
+{% csrf_token %}
+<div class="modal-content">
+<div class="modal-header"><h5>Rejeter l’absence</h5></div>
+<div class="modal-body">
+<textarea name="commentaire" class="form-control" required></textarea>
+</div>
+<div class="modal-footer">
+<button class="btn btn-danger">Rejeter</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+{% endfor %}
+
+{% for a in absences %}
+<div class="modal fade" id="hist{{ a.id }}">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header"><h5>Historique</h5></div>
+<div class="modal-body">
+<ul class="list-group">
+{% for h in a.historiques.all %}
+<li class="list-group-item">
+<strong>{{ h.date_validation|date:"d/m/Y H:i" }}</strong> —
+{{ h.decision }} ({{ h.utilisateur.get_full_name }})<br>
+<small>{{ h.motif }}</small>
+</li>
+{% endfor %}
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="annuler{{ a.id }}">
+<div class="modal-dialog">
+<form method="post" action="{% url 'annuler_absence_drh' a.id %}">
+{% csrf_token %}
+<div class="modal-content">
+<div class="modal-header"><h5>Annulation DRH</h5></div>
+<div class="modal-body">
+<textarea name="motif" class="form-control" required></textarea>
+<div class="alert alert-warning mt-2">
+Suppression définitive + restauration du quota
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-danger">Confirmer</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+{% endfor %}
+
+<div class="modal fade" id="modalQuota" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'ajuster_quota' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Ajuster le quota</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="user_id" id="quotaUser">
+          <input type="hidden" name="type_id" id="quotaType">
+          <input type="hidden" name="operation" id="quotaOperation">
+
+          <label class="form-label">Nombre de jours</label>
+          <input
+            type="number"
+            name="jours"
+            class="form-control"
+            step="0.5"
+            min="0.5"
+          >
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">
+            Confirmer
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Annuler
+          </button>
         </div>
       </div>
     </form>
   </div>
 </div>
 
-{% endif %}
-{% endfor %}
+<script>
+document.getElementById('modalQuota').addEventListener('show.bs.modal', function (event) {
+  const button = event.relatedTarget;
 
-{% for row in quota_rows %}
-<div class="modal fade" id="histQuota{{ row.user.id }}">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5>Historique des absences — {{ row.user.get_full_name }}</h5>
-      </div>
-      <div class="modal-body">
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Début</th>
-              <th>Fin</th>
-              <th>Jours</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for a in row.user.absences.all %}
-            <tr>
-              <td>{{ a.type_absence.nom }}</td>
-              <td>{{ a.date_debut }}</td>
-              <td>{{ a.date_fin }}</td>
-              <td>{{ a.nombre_jours }}</td>
-              <td>{{ a.get_statut_display }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5">Aucune absence</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-{% endfor %}
+  document.getElementById('quotaUser').value = button.getAttribute('data-user');
+  document.getElementById('quotaType').value = button.getAttribute('data-type');
+  document.getElementById('quotaOperation').value = button.getAttribute('data-operation');
+
+  const title = button.getAttribute('data-operation') === 'ajouter'
+    ? 'Ajouter des jours au quota'
+    : 'Réduire des jours du quota';
+
+  this.querySelector('.modal-title').textContent = title;
+});
+</script>
 
 
 {% endblock %}
