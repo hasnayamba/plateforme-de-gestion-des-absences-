@@ -1613,59 +1613,54 @@ def ajuster_quota(request):
     return redirect('dashboard_drh')
 
 
-from django.db.models import Value, CharField
-from django.utils.timezone import now
-from django.http import HttpResponse
-from django.template.loader import get_template
-from django.db.models import (
-    Value, CharField, F, ExpressionWrapper, DateField
-)
-
+@login_required
 def recap_absences_dp(request):
     aujourd_hui = date.today()
+    donnees = []
 
-    # =========================
+    # =====================
     # ABSENCES
-    # =========================
-    absences = (
-        Absence.objects
-        .annotate(
-            date_fin_calculee=ExpressionWrapper(
-                F("date_debut") + (F("nombre_jours") - 1),
-                output_field=DateField()
-            ),
-            type_demande=Value("Absence", output_field=CharField())
-        )
-        .filter(
-            statut="valide_dp",
-            date_fin_calculee__gt=aujourd_hui
-        )
-        .select_related("collaborateur", "type_absence")
+    # =====================
+    absences = Absence.objects.filter(statut='valide_dp').select_related(
+        'collaborateur', 'type_absence'
     )
 
-    # =========================
+    for a in absences:
+        # 🔥 calcul date_fin EXACTEMENT comme ailleurs
+        try:
+            date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
+        except Exception:
+            date_fin = a.date_debut
+
+        # ❌ exclure si ça finit aujourd’hui ou avant
+        if date_fin <= aujourd_hui:
+            continue
+
+        a.date_fin_calculee = date_fin
+        a.type_demande = "Absence"
+        donnees.append(a)
+
+    # =====================
     # RÉCUPÉRATIONS
-    # =========================
-    recuperations = (
-        Recuperation.objects
-        .annotate(
-            date_fin_calculee=ExpressionWrapper(
-                F("date_debut") + (F("nombre_jours") - 1),
-                output_field=DateField()
-            ),
-            type_demande=Value("Récupération", output_field=CharField())
-        )
-        .filter(
-            statut__in=["verifie_drh", "valide"],
-            date_fin_calculee__gt=aujourd_hui
-        )
-        .select_related("utilisateur")
-    )
+    # =====================
+    recuperations = Recuperation.objects.filter(
+        statut__in=['verifie_drh', 'valide']
+    ).select_related('utilisateur')
 
-    # =========================
-    # FUSION + TRI
-    # =========================
-    donnees = list(absences) + list(recuperations)
+    for r in recuperations:
+        try:
+            date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
+        except Exception:
+            date_fin = r.date_debut
+
+        if date_fin <= aujourd_hui:
+            continue
+
+        r.date_fin_calculee = date_fin
+        r.type_demande = "Récupération"
+        donnees.append(r)
+
+    # Tri par date
     donnees.sort(key=lambda x: x.date_debut)
 
     return render(request, "dashboard/dp.html", {
