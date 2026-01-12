@@ -1066,6 +1066,7 @@ def dashboard_dp(request):
         'historiques': historiques,
         'recuperations': recuperations,
         'page_obj': page_obj,
+        "donnees": donnees,
     }
     return render(request, 'dashboard/dp.html', context)
 
