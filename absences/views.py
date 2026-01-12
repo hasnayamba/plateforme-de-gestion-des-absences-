@@ -705,7 +705,7 @@ def dashboard_drh(request):
         .select_related('collaborateur', 'type_absence')
         .filter(
             collaborateur__profile__superieur=request.user,
-            statut='verifie_rh'  # déjà validées RH
+            statut='verifie_drh'  # déjà validées RH
         )
         .exclude(collaborateur=request.user)  # ❌ jamais ses propres absences
         .order_by('date_creation')

@@ -304,9 +304,16 @@
 <tr>
   <td class="fw-semibold">{{ row.user.get_full_name }}</td>
 
-  {% for item in row.quotas %}
-  <td class="text-center">
-    <strong>{{ item.quota.jours_disponibles|default:0 }}</strong>
+    {% for item in row.quotas %}
+    <td class="text-center">
+      <strong>
+    {% if item.quota %}
+      {{ item.quota.jours_disponibles }}
+    {% else %}
+      0
+    {% endif %}
+  </strong>
+
 
     <div class="d-inline-flex ms-2">
       <button class="btn btn-success btn-sm me-1"
@@ -399,23 +406,23 @@
   <td class="text-end">
     <form method="post" style="display:inline;">
                 {% csrf_token %}
-                <input type="hidden" name="absence_id" value="{{ absence.id }}">
+                <input type="hidden" name="absence_id" value="{{ a.id }}">
                 <button name="decision" value="valider" class="btn btn-success btn-sm">Valider</button>
               </form>
 
               <!-- Rejeter -->
-              <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejet{{ absence.id }}">Rejeter</button>
+              <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRejet{{ a.id }}">Rejeter</button>
 
               <!-- Historique -->
-              <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalHistorique{{ absence.id }}">Historique</button>
+              <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalHistorique{{ a.id }}">Historique</button>
 
               <!-- Modal Rejet -->
-              <div class="modal fade" id="modalRejet{{ absence.id }}" tabindex="-1">
+              <div class="modal fade" id="modalRejet{{ a.id }}" tabindex="-1">
                 <div class="modal-dialog">
                   <div class="modal-content">
                     <form method="post">
                       {% csrf_token %}
-                      <input type="hidden" name="absence_id" value="{{ absence.id }}">
+                      <input type="hidden" name="absence_id" value="{{ a.id }}">
                       <input type="hidden" name="decision" value="rejeter">
                       <div class="modal-header">
                         <h5 class="modal-title">Motif du rejet</h5>
@@ -434,7 +441,7 @@
               </div>
 
               <!-- Modal Historique -->
-              <div class="modal fade" id="modalHistorique{{ absence.id }}" tabindex="-1">
+              <div class="modal fade" id="modalHistorique{{ a.id }}" tabindex="-1">
                 <div class="modal-dialog">
                   <div class="modal-content">
                     <div class="modal-header">
@@ -443,7 +450,7 @@
                     </div>
                     <div class="modal-body">
                       <ul>
-                        {% for h in absence.historiques.all %}
+                        {% for h in a.historiques.all %}
                         <li>
                           {{ h.date_validation|date:"d/m/Y H:i" }} — {{ h.role_valide }} :
                           {{ h.decision|title }}{% if h.motif %} (Motif : {{ h.motif }}){% endif %}
@@ -465,10 +472,6 @@
           {% empty %}
           <tr><td colspan="6" class="text-center">Aucune absence à valider.</td></tr>
           {% endfor %}
-     
-  </td>
-</tr>
-
 
 </tbody>
 </table>
@@ -589,7 +592,14 @@
             </small>
           </p>
              <p class="mb-0">
-            Quota restant : {{ a.quota_total_restant }} jours {{ a.type_absence.nom }} <br>
+            Quota restant :
+                {% if a.quota_total_restant is not None %}
+                  {{ a.quota_total_restant }}
+                {% else %}
+                  0
+                {% endif %}
+                jours {{ a.type_absence.nom }}
+ <br>
           </p>
 
         </div>
@@ -720,18 +730,24 @@
 </div>
 
 <script>
-document.getElementById('modalQuota').addEventListener('show.bs.modal', function (event) {
-  const button = event.relatedTarget;
-  document.getElementById('quotaUser').value = button.dataset.user;
-  document.getElementById('quotaType').value = button.dataset.type;
-  document.getElementById('quotaOperation').value = button.dataset.operation;
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modalQuota');
+  if (!modal) return;
 
-  this.querySelector('.modal-title').textContent =
-    button.dataset.operation === 'ajouter'
-    ? 'Ajouter des jours au quota'
-    : 'Réduire des jours du quota';
+  modal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    document.getElementById('quotaUser').value = button.dataset.user;
+    document.getElementById('quotaType').value = button.dataset.type;
+    document.getElementById('quotaOperation').value = button.dataset.operation;
+
+    this.querySelector('.modal-title').textContent =
+      button.dataset.operation === 'ajouter'
+      ? 'Ajouter des jours au quota'
+      : 'Réduire des jours du quota';
+  });
 });
 </script>
+
 
 
 {% endblock %}
