@@ -226,171 +226,95 @@ def dashboard_collaborateur(request):
     return render(request, 'dashboard/collaborateurs.html')
 
 
-# -----------------------------
-# VERIFIER QUOTA
-# ----------------------------- 
-def verifier_quota(user, type_absence, nombre_jours_demande, annee=None):
-    """
-    Vérifie si l'utilisateur a assez de quota pour le type d'absence donné et l'année spécifiée.
-    Retourne True si suffisant, False sinon.
-    """
-    if annee is None:
-        from datetime import date
-        annee = date.today().year
+# =====================================================
+# OUTILS MÉTIER (VUE UNIQUEMENT)
+# =====================================================
 
-    try:
-        quota = QuotaAbsence.objects.get(user=user, type_absence=type_absence, annee=annee)
-    except QuotaAbsence.DoesNotExist:
-        # Aucun quota défini = refus
-        return False
+def verifier_quota(user, type_absence, jours, annee):
+    quota = QuotaAbsence.objects.filter(
+        user=user,
+        type_absence=type_absence,
+        annee=annee
+    ).first()
+    return quota and quota.jours_disponibles >= jours
 
-    # On vérifie le quota disponible
-    return quota.jours_disponibles >= nombre_jours_demande
 
-# -----------------------------
-# Soumettre une absence
-# ----------------------------- 
+# =====================================================
+# SOUMISSION ABSENCE (LOGIQUE CENTRALE)
+# =====================================================
+
 @login_required
 def soumettre_absence(request, absence_id=None):
-    types_absence = TypeAbsence.objects.all()
-    jours_feries_qs = JourFerie.objects.all()
-    jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
+    types = TypeAbsence.objects.all()
+    jours_feries = set(JourFerie.objects.values_list('date', flat=True))
 
     absence = None
     if absence_id:
         absence = get_object_or_404(Absence, id=absence_id, collaborateur=request.user)
 
-    # Pré-remplissage pour modification
-    form_data = {
-        'type_absence': absence.type_absence.id if absence else '',
-        'date_debut': absence.date_debut.strftime('%Y-%m-%d') if absence else '',
-        'nombre_jours': absence.nombre_jours if absence else '',
-        'raison': absence.raison if absence else '',
-    }
-
     if request.method == 'POST':
-        type_id = request.POST.get('type_absence')
-        date_debut = request.POST.get('date_debut')
-        nombre_jours = request.POST.get('nombre_jours')
+        type_absence = get_object_or_404(TypeAbsence, id=request.POST['type_absence'])
+        date_debut = datetime.strptime(request.POST['date_debut'], "%Y-%m-%d").date()
+        nombre_jours = float(request.POST['nombre_jours'])
         raison = request.POST.get('raison')
-        justificatif = request.FILES.get('justificatif')
 
-        # Met à jour form_data pour réaffichage en cas d'erreur
-        form_data.update({
-            'type_absence': type_id,
-            'date_debut': date_debut,
-            'nombre_jours': nombre_jours,
-            'raison': raison,
-        })
+        # 🔥 CALCUL DATE FIN (jours ouvrés)
+        jours_restants = int(nombre_jours)
+        date_courante = date_debut
+        jours_comptes = 1
 
-        # Vérification des champs obligatoires
-        if not type_id or not date_debut or not nombre_jours:
-            messages.error(request, "Tous les champs obligatoires doivent être remplis.")
-            return render(request, 'collaborateur/soumettre_absence.html', {
-                'types_absence': types_absence,
-                'jours_feries': jours_feries,
-                'absence': absence,
-                'form_data': form_data,
-            })
+        while jours_comptes < jours_restants:
+            date_courante += timedelta(days=1)
+            if date_courante.weekday() >= 5 or date_courante in jours_feries:
+                continue
+            jours_comptes += 1
 
-        try:
-            type_absence = TypeAbsence.objects.get(pk=type_id)
-            date_debut_obj = datetime.strptime(date_debut, "%Y-%m-%d").date()
-            nombre_jours_float = float(nombre_jours)
-            if nombre_jours_float <= 0:
-                raise ValueError
-        except (TypeAbsence.DoesNotExist, ValueError):
-            messages.error(request, "Données invalides dans le formulaire.")
-            return render(request, 'collaborateur/soumettre_absence.html', {
-                'types_absence': types_absence,
-                'jours_feries': jours_feries,
-                'absence': absence,
-                'form_data': form_data,
-            })
+        date_fin = date_courante
 
-        # Vérification du quota (en plus du clean)
-        annee_demande = date_debut_obj.year
-        if not verifier_quota(request.user, type_absence, nombre_jours_float, annee_demande):
-            messages.error(request, f"Quota insuffisant pour ce type d'absence pour l'année {annee_demande}.")
-            return render(request, 'collaborateur/soumettre_absence.html', {
-                'types_absence': types_absence,
-                'jours_feries': jours_feries,
-                'absence': absence,
-                'form_data': form_data,
-            })
-
-        # Création ou modification de l'absence
+        # Chevauchement
+        conflits = Absence.objects.filter(
+            collaborateur=request.user,
+            date_debut__lte=date_fin,
+            date_fin__gte=date_debut,
+            statut__in=['en_attente', 'verifie_drh', 'approuve_superieur', 'valide_dp']
+        )
         if absence:
-            # --- Modification ---
-            absence.type_absence = type_absence
-            absence.date_debut = date_debut_obj
-            absence.nombre_jours = nombre_jours_float
-            absence.raison = raison
-            absence.statut = 'en_attente'  # repasse à l’état initial
-            if justificatif:
-                absence.justificatif = justificatif
-            # Vérification de chevauchement                 
-            jours_calendaires = math.ceil(nombre_jours_float)
-            date_fin_tmp = date_debut_obj + timedelta(days=jours_calendaires - 1)
-            chevauchement = Absence.objects.filter(
-                collaborateur=request.user,
-                date_debut__lte=date_fin_tmp,
-                date_fin__gte=date_debut_obj,
-                statut__in=['en_attente', 'approuve_superieur', 'verifie_drh', 'valide_dp']
-            )
+            conflits = conflits.exclude(id=absence.id)
+        if conflits.exists():
+            messages.error(request, "Chevauchement détecté.")
+            return redirect('mes_absences')
 
-            if absence:
-                chevauchement = chevauchement.exclude(id=absence.id)
+        # Quota
+        if not verifier_quota(request.user, type_absence, nombre_jours, date_debut.year):
+            messages.error(request, "Quota insuffisant.")
+            return redirect('mes_absences')
 
-            if chevauchement.exists():
-                messages.error(
-                    request,
-                    "Une autre absence (active) chevauche déjà cette période."
-                )
-                return render(request, 'collaborateur/soumettre_absence.html', {
-                    'types_absence': types_absence,
-                    'jours_feries': jours_feries,
-                    'absence': absence,
-                    'form_data': form_data,
-                })
+        # Création / modification
+        absence = absence or Absence(collaborateur=request.user)
+        absence.type_absence = type_absence
+        absence.date_debut = date_debut
+        absence.date_fin = date_fin
+        absence.nombre_jours = nombre_jours
+        absence.raison = raison
+        absence.statut = 'en_attente'
+        absence.save()
 
-            
-            absence.save()
+        ValidationHistorique.objects.create(
+            absence=absence,
+            utilisateur=request.user,
+            decision='soumise' if not absence_id else 'modifiee',
+            motif='Soumission collaborateur'
+        )
 
-            ValidationHistorique.objects.create(
-                absence=absence,
-                utilisateur=request.user,
-                decision='modifiee_par_collaborateur',
-                motif="Demande modifiée par le collaborateur"
-            )
-            messages.success(request, "Demande d'absence modifiée avec succès.")
-
-        else:
-            # --- Création ---
-            absence = Absence(
-                collaborateur=request.user,
-                type_absence=type_absence,
-                date_debut=date_debut_obj,
-                nombre_jours=nombre_jours_float,
-                raison=raison,
-                justificatif=justificatif,
-                statut='en_attente'
-            )
-         
-            absence.save()
-            messages.success(request, "Demande d’absence soumise avec succès.")
-
+        messages.success(request, "Absence enregistrée.")
         return redirect('mes_absences')
 
-    # GET : affichage formulaire
     return render(request, 'collaborateur/soumettre_absence.html', {
-        'types_absence': types_absence,
-        'jours_feries': jours_feries,
-        'absence': absence,
-        'form_data': form_data,
+        'types_absence': types,
+        'absence': absence
     })
 
-  
+
 # -----------------------------
 # Annuler une absence
 # -----------------------------
@@ -496,61 +420,45 @@ def mon_quota(request):
     return render(request, 'collaborateur/mon_quota.html', {'quotas': quotas})
 
 
-# -----------------------------
-# liste des absences du collaborateur
-# -----------------------------
-from datetime import timedelta
-
-from datetime import timedelta
-from django.db.models import Prefetch
+# =====================================================
+# MES ABSENCES (LECTURE SEULE)
+# =====================================================
 
 @login_required
 def mes_absences(request):
-    # 1️⃣ Récupérer toutes les absences
-    absences = Absence.objects.filter(collaborateur=request.user).order_by('-date_creation').prefetch_related(
-        Prefetch('historiques', queryset=ValidationHistorique.objects.order_by('-date_validation'))
+    absences = Absence.objects.filter(
+        collaborateur=request.user
+    ).prefetch_related(
+        Prefetch(
+            'historiques',
+            queryset=ValidationHistorique.objects.order_by('-date_validation')
+        )
     )
 
-    # 2️⃣ Récupérer toutes les récupérations
-    recuperations = Recuperation.objects.filter(utilisateur=request.user).order_by('-date_soumission')
+    recuperations = Recuperation.objects.filter(utilisateur=request.user)
 
-    # 3️⃣ Préparer les récupérations pour le template
-    for r in recuperations:
-        r.type_demande = 'Recuperation'
-        if not hasattr(r, 'statut') or r.statut is None:
-            r.statut = 'en_attente'
-        # Gestion de la date de fin
-        if float(r.nombre_jours) <= 1:
-            r.date_fin = r.date_debut
-        else:
-            r.date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
-
-    # 4️⃣ Préparer les absences pour le template
+    # 🔑 MARQUEUR DE TYPE
     for a in absences:
-        a.type_demande = 'Absence'
-        if not hasattr(a, 'date_fin') or a.date_fin is None:
-            if float(a.nombre_jours) <= 1:
-                a.date_fin = a.date_debut
-            else:
-                a.date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
+        a.type_demande = "Absence"
 
-    # 5️⃣ Fusionner et trier par date de début décroissante
-    demandes = sorted(list(absences) + list(recuperations), key=lambda x: x.date_debut, reverse=True)
+    for r in recuperations:
+        r.type_demande = "Recuperation"
+        try:
+            r.date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
+        except Exception:
+            r.date_fin = r.date_debut
 
-    # 6️⃣ Types d'absence et jours fériés
-    types_absence = TypeAbsence.objects.all()
-    jours_feries_qs = JourFerie.objects.all()
-    jours_feries = [j.date.strftime('%Y-%m-%d') for j in jours_feries_qs]
-
-    # 7️⃣ Statuts modifiables pour les absences
-    statuts_modifiables = [s[0] for s in STATUT_ABSENCE if s[0] in ('en_attente', 'valider', 'approuve_superieur', 'verifie_drh')]
+    demandes = sorted(
+        list(absences) + list(recuperations),
+        key=lambda x: x.date_debut,
+        reverse=True
+    )
 
     return render(request, 'collaborateur/mes_absences.html', {
         'absences': demandes,
-        'types_absence': types_absence,
-        'jours_feries': jours_feries,
-        'statuts_modifiables': statuts_modifiables,
+        'types_absence': TypeAbsence.objects.all(),
     })
+
 # -----------------------------
 # calendrier des absences
 # -----------------------------
@@ -692,14 +600,24 @@ def dashboard_drh(request):
 
     # =========================
     # DEMANDES À VÉRIFIER (RH)
-    # =========================
+    # ========================="
+        
     absences_a_verifier = (
         Absence.objects
         .select_related('collaborateur', 'type_absence')
         .filter(statut='en_attente')
         .order_by('date_creation')
     )
+    
 
+
+    for a in absences_a_verifier:
+        quota = QuotaAbsence.objects.filter(
+            user=a.collaborateur,
+            type_absence=a.type_absence,
+            annee=annee_courante
+        ).first()
+        a.quota_total_restant = quota.jours_disponibles if quota else 0
     # =========================
     # HISTORIQUE GLOBAL
     # =========================
@@ -708,40 +626,15 @@ def dashboard_drh(request):
         .select_related('absence', 'utilisateur')
         .order_by('-date_validation')
     )
-
-    # =========================
-    # REPORT AUTOMATIQUE DES QUOTAS (UNE SEULE FOIS)
-    # =========================
-    users_report = User.objects.filter(profile__role='collaborateur')
-    types_absence = TypeAbsence.objects.all()
-
-    for user in users_report:
-        for t in types_absence:
-            quota_ancien = QuotaAbsence.objects.filter(
-                user=user,
-                type_absence=t,
-                annee=annee_precedente
-            ).first()
-
-            if not quota_ancien or quota_ancien.jours_disponibles <= 0:
-                continue
-
-            QuotaAbsence.objects.get_or_create(
-                user=user,
-                type_absence=t,
-                annee=annee_courante,
-                defaults={'jours_disponibles': quota_ancien.jours_disponibles}
-            )
-
     # =========================
     # QUOTAS (COLLABORATEURS + SUPÉRIEURS)
     # =========================
     users = (
         User.objects
-        .filter(profile__role__in=['collaborateur', 'superieur', 'drh', 'dp'])
+        .filter(profile__role__in=['collaborateur', 'superieur', 'drh'])
         .order_by('last_name', 'first_name')
     )
-
+    types_absence = TypeAbsence.objects.filter(nom__iexact="Congé Annuel")
     quota_rows = []
     for user in users:
         quotas_ligne = []
@@ -761,6 +654,13 @@ def dashboard_drh(request):
             'user': user,
             'quotas': quotas_ligne
         })
+        
+            
+    if not quota:
+        messages.error(
+            request,
+            "Votre quota pour l’année en cours n’est pas encore disponible. Veuillez contacter la RH."
+        )
 
     # =========================
     # RÉCUPÉRATIONS
@@ -770,11 +670,70 @@ def dashboard_drh(request):
         .select_related('utilisateur')
         .order_by('-date_soumission')
     )
+    
+    # =========================
+    # TABLEAU CONGÉ ANNUEL 2025 / 2026
+    # =========================
+    type_conge_annuel = TypeAbsence.objects.filter(nom__iexact="Congé Annuel").first()
+
+    annees_conge = [2025, 2026]
+    conges_annuels_rows = []
+
+    if type_conge_annuel:
+        for user in users:
+            row = {
+                'user': user,
+                '2025': 0,
+                '2026': 0
+            }
+
+            for annee in annees_conge:
+                quota = QuotaAbsence.objects.filter(
+                    user=user,
+                    type_absence=type_conge_annuel,
+                    annee=annee
+                ).first()
+
+                row[str(annee)] = quota.jours_disponibles if quota else 0
+
+            conges_annuels_rows.append(row)
+# =========================
+# DEMANDES À VALIDER EN TANT QUE SUPÉRIEUR
+# =========================
+    absences_comme_superieur = (
+        Absence.objects
+        .select_related('collaborateur', 'type_absence')
+        .filter(
+            collaborateur__profile__superieur=request.user,
+            statut='verifie_rh'  # déjà validées RH
+        )
+        .exclude(collaborateur=request.user)  # ❌ jamais ses propres absences
+        .order_by('date_creation')
+    )
+
+            
+# =========================
+# COMPTEURS DRH
+# =========================
+    nb_en_attente = Absence.objects.filter(
+            statut='en_attente'
+        ).count()
+
+    nb_validees = Absence.objects.filter(
+            statut='valide_dp'
+        ).count()
+
+    nb_annulees = Absence.objects.filter(
+            statut__in=['rejete', 'annulee']
+        ).count()
+
+
 
     # =========================
     # CONTEXTE FINAL
     # =========================
     context = {
+        'absences_comme_superieur': absences_comme_superieur,
         # Demandes RH
         'absences_a_verifier': absences_a_verifier,
 
@@ -795,9 +754,74 @@ def dashboard_drh(request):
         'mois_selectionne': int(mois) if mois else None,
         'type_selectionne': int(type_id) if type_id else None,
         'statut_selectionne': statut,
+        'conges_annuels_rows': conges_annuels_rows,
+        'nb_en_attente': nb_en_attente,
+        'nb_validees': nb_validees,
+        'nb_annulees': nb_annulees,
+
     }
 
     return render(request, 'dashboard/drh.html', context)
+
+
+@login_required
+def reporter_quotas(request):
+    # 🔐 Sécurité : DRH uniquement
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
+    if request.method != 'POST':
+        return redirect('dashboard_drh')
+
+    annee_courante = date.today().year
+    annee_precedente = annee_courante - 1
+
+    collaborateurs = User.objects.filter(profile__role='collaborateur')
+    types_absence = TypeAbsence.objects.all()
+
+    quotas_crees = 0
+    quotas_ignores = 0
+
+    for user in collaborateurs:
+        for type_abs in types_absence:
+            # 🔎 quota restant de l'année précédente
+            quota_ancien = QuotaAbsence.objects.filter(
+                user=user,
+                type_absence=type_abs,
+                annee=annee_precedente
+            ).first()
+
+            # Rien à reporter
+            if not quota_ancien or quota_ancien.jours_disponibles <= 0:
+                continue
+
+            # 🔒 Sécurité : empêche double report
+            quota, created = QuotaAbsence.objects.get_or_create(
+                user=user,
+                type_absence=type_abs,
+                annee=annee_courante,
+                defaults={
+                    'jours_disponibles': quota_ancien.jours_disponibles
+                }
+            )
+
+            if created:
+                quotas_crees += 1
+            else:
+                quotas_ignores += 1
+
+    messages.success(
+        request,
+        (
+            f"Report terminé avec succès. "
+            f"{quotas_crees} quota(s) créé(s) pour {annee_courante}. "
+            f"{quotas_ignores} déjà existant(s) ignoré(s)."
+        )
+    )
+
+    return redirect('dashboard_drh')
+
 
 
 
@@ -986,7 +1010,6 @@ def dashboard_dp(request):
     recuperations_validees = Recuperation.objects.filter(
         statut='valide'
     )
-
     # --- Gestion des récupérations --- #
     recuperation = Recuperation.objects.filter(
         statut='verifie_drh'
@@ -1044,6 +1067,26 @@ def valider_absence_dp(request, absence_id):
         messages.success(request, f"L'absence de {absence.collaborateur.get_full_name()} a été validée par le DP.")
     else:
         messages.error(request, "Cette absence ne peut pas être validée (statut incorrect ou non autorisée).")
+    
+        
+      # =========================
+    # ➖ DÉDUCTION DU QUOTA
+    # =========================
+    try:
+        quota = QuotaAbsence.objects.get(
+            user=absence.collaborateur,
+            type_absence=absence.type_absence,
+            annee=absence.date_debut.year
+        )
+
+        quota.jours_disponibles -= absence.nombre_jours
+        quota.save()
+
+    except QuotaAbsence.DoesNotExist:
+        messages.warning(
+            request,
+            "Attention : aucun quota trouvé pour cette absence."
+        )
 
     return redirect('dashboard_dp')
 
