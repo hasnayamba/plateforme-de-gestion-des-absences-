@@ -626,41 +626,33 @@ def dashboard_drh(request):
         .select_related('absence', 'utilisateur')
         .order_by('-date_validation')
     )
-    # =========================
-    # QUOTAS (COLLABORATEURS + SUPÉRIEURS)
-    # =========================
-    users = (
-        User.objects
-        .filter(profile__role__in=['collaborateur', 'superieur', 'drh'])
-        .order_by('last_name', 'first_name')
-    )
-    types_absence = TypeAbsence.objects.filter(nom__iexact="Congé Annuel")
+# =========================
+# QUOTAS – CONGÉ ANNUEL UNIQUEMENT
+# =========================
+
+    type_conge_annuel = TypeAbsence.objects.filter(
+        nom__icontains="congé"
+    ).first()
+
     quota_rows = []
-    for user in users:
-        quotas_ligne = []
-        for t in types_absence:
+
+    if type_conge_annuel:
+        for user in users:
             quota = QuotaAbsence.objects.filter(
                 user=user,
-                type_absence=t,
+                type_absence=type_conge_annuel,
                 annee=annee_courante
             ).first()
 
-            quotas_ligne.append({
-                'type': t,
-                'quota': quota
+            quota_rows.append({
+                'user': user,
+                'quotas': [
+                    {
+                        'type': type_conge_annuel,
+                        'quota': quota
+                    }
+                ]
             })
-
-        quota_rows.append({
-            'user': user,
-            'quotas': quotas_ligne
-        })
-        
-            
-    if not quota:
-        messages.error(
-            request,
-            "Votre quota pour l’année en cours n’est pas encore disponible. Veuillez contacter la RH."
-        )
 
     # =========================
     # RÉCUPÉRATIONS
@@ -671,13 +663,16 @@ def dashboard_drh(request):
         .order_by('-date_soumission')
     )
     
-    # =========================
-    # TABLEAU CONGÉ ANNUEL 2025 / 2026
-    # =========================
-    type_conge_annuel = TypeAbsence.objects.filter(nom__iexact="Congé Annuel").first()
+ # =========================
+# TABLEAU CONGÉ ANNUEL 2025 / 2026
+# =========================
 
     annees_conge = [2025, 2026]
     conges_annuels_rows = []
+    
+    users = User.objects.filter(
+    profile__role__in=['collaborateur', 'superieur', 'drh']
+).order_by('last_name', 'first_name')
 
     if type_conge_annuel:
         for user in users:
@@ -694,9 +689,11 @@ def dashboard_drh(request):
                     annee=annee
                 ).first()
 
-                row[str(annee)] = quota.jours_disponibles if quota else 0
+                if quota:
+                    row[str(annee)] = quota.jours_disponibles
 
             conges_annuels_rows.append(row)
+
 # =========================
 # DEMANDES À VALIDER EN TANT QUE SUPÉRIEUR
 # =========================
@@ -743,7 +740,8 @@ def dashboard_drh(request):
 
         # Quotas
         'quota_rows': quota_rows,
-        'types': types_absence,
+        'types': [type_conge_annuel] if type_conge_annuel else [],
+
 
         # Récupérations
         'recuperations': recuperations,
