@@ -1617,44 +1617,56 @@ from django.db.models import Value, CharField
 from django.utils.timezone import now
 from django.http import HttpResponse
 from django.template.loader import get_template
+from django.db.models import (
+    Value, CharField, F, ExpressionWrapper, DateField
+)
 
-
-@login_required
 def recap_absences_dp(request):
     aujourd_hui = date.today()
 
-    # -------------------------
-    # ABSENCES FUTURES OU AUJOURD'HUI
-    # -------------------------
+    # =========================
+    # ABSENCES
+    # =========================
     absences = (
         Absence.objects
-        .filter(
-            statut__in=['valide_dp'],
-            date_fin__gte=aujourd_hui
+        .annotate(
+            date_fin_calculee=ExpressionWrapper(
+                F("date_debut") + (F("nombre_jours") - 1),
+                output_field=DateField()
+            ),
+            type_demande=Value("Absence", output_field=CharField())
         )
-        .select_related('collaborateur', 'type_absence')
-        .annotate(type_demande=Value('Absence', output_field=CharField()))
+        .filter(
+            statut="valide_dp",
+            date_fin_calculee__gt=aujourd_hui
+        )
+        .select_related("collaborateur", "type_absence")
     )
 
-    # -------------------------
-    # RÉCUPÉRATIONS FUTURES OU AUJOURD'HUI
-    # -------------------------
+    # =========================
+    # RÉCUPÉRATIONS
+    # =========================
     recuperations = (
         Recuperation.objects
-        .filter(
-            statut__in=['verifie_drh', 'valide'],
-            date_fin__gte=aujourd_hui
+        .annotate(
+            date_fin_calculee=ExpressionWrapper(
+                F("date_debut") + (F("nombre_jours") - 1),
+                output_field=DateField()
+            ),
+            type_demande=Value("Récupération", output_field=CharField())
         )
-        .select_related('utilisateur')
-        .annotate(type_demande=Value('Récupération', output_field=CharField()))
+        .filter(
+            statut__in=["verifie_drh", "valide"],
+            date_fin_calculee__gt=aujourd_hui
+        )
+        .select_related("utilisateur")
     )
 
-    # Fusion
+    # =========================
+    # FUSION + TRI
+    # =========================
     donnees = list(absences) + list(recuperations)
-
-    # Tri par date
     donnees.sort(key=lambda x: x.date_debut)
-
 
     return render(request, "dashboard/dp.html", {
         "donnees": donnees
