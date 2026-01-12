@@ -25,6 +25,8 @@
   <button class="nav-link" id="historique-tab" data-bs-toggle="tab" data-bs-target="#historique" type="button" role="tab">📚 Historique des absences
   </button>
 </li>
+    <li class="nav-item">
+      <button class="nav-link" id="recapitulatif-tab" data-bs-toggle="tab" data-bs-target="#recapitulatif" type="button" role="tab">📊
 
   </ul>
 
@@ -145,6 +147,11 @@
     <div class="tab-pane fade" id="historique" role="tabpanel">
   {% include 'dp/partials/historique_absences.html' %}
 </div>
+
+    <!-- Récapitulatif des absences -->
+    <div class="tab-pane fade" id="recapitulatif" role="tabpanel">
+      {% include 'dp/partials/recap_absences.html' %}
+    </div>
 
 
   </div>

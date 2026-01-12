@@ -1,0 +1,48 @@
+
+
+<div class="container mt-4">
+  <h4>📊 Récapitulatif des absences et récupérations (à partir d’aujourd’hui)</h4>
+
+  <div class="mb-3">
+    <a href="?export=pdf" class="btn btn-danger">📄 Exporter en PDF</a>
+    <button onclick="window.print()" class="btn btn-secondary">🖨️ Imprimer</button>
+  </div>
+
+  <table class="table table-bordered table-striped">
+    <thead class="table-dark">
+      <tr>
+        <th>Collaborateur</th>
+        <th>Type de demande</th>
+        <th>Type d’absence</th>
+        <th>Date début</th>
+        <th>Date fin</th>
+        <th>Nombre de jours</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in donnees %}
+      <tr>
+        <td>
+          {% if d.type_demande == "Absence" %}
+            {{ d.collaborateur.get_full_name }}
+          {% else %}
+            {{ d.utilisateur.get_full_name }}
+          {% endif %}
+        </td>
+        <td>{{ d.type_demande }}</td>
+        <td>{{ d.type_absence.nom|default:"-" }}</td>
+        <td>{{ d.date_debut }}</td>
+        <td>{{ d.date_fin }}</td>
+        <td>{{ d.nombre_jours }}</td>
+        <td>{{ d.get_statut_display }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center">Aucune donnée à afficher</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+

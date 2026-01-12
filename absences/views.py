@@ -655,12 +655,6 @@ def dashboard_drh(request):
             'quotas': quotas_ligne
         })
         
-            
-    if not quota:
-        messages.error(
-            request,
-            "Votre quota pour l’année en cours n’est pas encore disponible. Veuillez contacter la RH."
-        )
 
     # =========================
     # RÉCUPÉRATIONS
@@ -674,7 +668,10 @@ def dashboard_drh(request):
     # =========================
     # TABLEAU CONGÉ ANNUEL 2025 / 2026
     # =========================
-    type_conge_annuel = TypeAbsence.objects.All()
+    type_conge_annuel = TypeAbsence.objects.filter(
+    nom__iexact="Congés Annuel"
+).first()
+
 
     annees_conge = [2025, 2026]
     conges_annuels_rows = []
@@ -726,8 +723,6 @@ def dashboard_drh(request):
     nb_annulees = Absence.objects.filter(
             statut__in=['rejete', 'annulee']
         ).count()
-
-
 
     # =========================
     # CONTEXTE FINAL
@@ -858,6 +853,38 @@ def modifier_absence_drh(request, absence_id):
 @login_required
 def verifier_absence(request, absence_id):
     absence = get_object_or_404(Absence, id=absence_id)
+
+    # 🔐 sécurité DRH
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
+    # ➖ DÉDUCTION DU QUOTA
+    try:
+        quota = QuotaAbsence.objects.get(
+            user=absence.collaborateur,
+            type_absence=absence.type_absence,
+            annee=absence.date_debut.year
+        )
+
+        if quota.jours_disponibles < absence.nombre_jours:
+            messages.error(
+                request,
+                "Quota insuffisant. Vérification impossible."
+            )
+            return redirect('dashboard_drh')
+
+        quota.jours_disponibles -= absence.nombre_jours
+        quota.save()
+
+    except QuotaAbsence.DoesNotExist:
+        messages.error(
+            request,
+            "Aucun quota trouvé pour cette absence."
+        )
+        return redirect('dashboard_drh')
+
+    # ✔️ validation RH
     absence.verifie_par_drh = True
     absence.date_verification_drh = timezone.now()
     absence.statut = 'verifie_drh'
@@ -869,7 +896,10 @@ def verifier_absence(request, absence_id):
         decision='verifie_par_drh',
         motif="Vérifié par la DRH"
     )
+
+    messages.success(request, "Absence vérifiée et quota déduit.")
     return redirect('dashboard_drh')
+
 
 @login_required
 def rejeter_absence_drh(request, absence_id):
@@ -1068,25 +1098,6 @@ def valider_absence_dp(request, absence_id):
     else:
         messages.error(request, "Cette absence ne peut pas être validée (statut incorrect ou non autorisée).")
     
-        
-      # =========================
-    # ➖ DÉDUCTION DU QUOTA
-    # =========================
-    try:
-        quota = QuotaAbsence.objects.get(
-            user=absence.collaborateur,
-            type_absence=absence.type_absence,
-            annee=absence.date_debut.year
-        )
-
-        quota.jours_disponibles -= absence.nombre_jours
-        quota.save()
-
-    except QuotaAbsence.DoesNotExist:
-        messages.warning(
-            request,
-            "Attention : aucun quota trouvé pour cette absence."
-        )
 
     return redirect('dashboard_dp')
 
@@ -1600,3 +1611,51 @@ def ajuster_quota(request):
 
     quota.save()
     return redirect('dashboard_drh')
+
+
+from django.db.models import Value, CharField
+from django.utils.timezone import now
+from django.http import HttpResponse
+from django.template.loader import get_template
+
+
+@login_required
+def recap_absences_dp(request):
+    aujourd_hui = date.today()
+
+    # -------------------------
+    # ABSENCES FUTURES OU AUJOURD'HUI
+    # -------------------------
+    absences = (
+        Absence.objects
+        .filter(
+            statut__in=['verifie_drh', 'approuve_superieur', 'valide_dp'],
+            date_debut__gte=aujourd_hui
+        )
+        .select_related('collaborateur', 'type_absence')
+        .annotate(type_demande=Value('Absence', output_field=CharField()))
+    )
+
+    # -------------------------
+    # RÉCUPÉRATIONS FUTURES OU AUJOURD'HUI
+    # -------------------------
+    recuperations = (
+        Recuperation.objects
+        .filter(
+            statut__in=['verifie_drh', 'valide'],
+            date_debut__gte=aujourd_hui
+        )
+        .select_related('utilisateur')
+        .annotate(type_demande=Value('Récupération', output_field=CharField()))
+    )
+
+    # Fusion
+    donnees = list(absences) + list(recuperations)
+
+    # Tri par date
+    donnees.sort(key=lambda x: x.date_debut)
+
+
+    return render(request, "dashboard/dp.html", {
+        "donnees": donnees
+    })
