@@ -1629,8 +1629,8 @@ def recap_absences_dp(request):
     absences = (
         Absence.objects
         .filter(
-            statut__in=['verifie_drh', 'approuve_superieur', 'valide_dp'],
-            date_debut__gte=aujourd_hui
+            statut__in=['valide_dp'],
+            date_fin__gte=aujourd_hui
         )
         .select_related('collaborateur', 'type_absence')
         .annotate(type_demande=Value('Absence', output_field=CharField()))
@@ -1643,7 +1643,7 @@ def recap_absences_dp(request):
         Recuperation.objects
         .filter(
             statut__in=['verifie_drh', 'valide'],
-            date_debut__gte=aujourd_hui
+            date_fin__gte=aujourd_hui
         )
         .select_related('utilisateur')
         .annotate(type_demande=Value('Récupération', output_field=CharField()))
