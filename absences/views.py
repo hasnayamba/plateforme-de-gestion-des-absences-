@@ -1664,5 +1664,5 @@ def recap_absences_dp(request):
     donnees.sort(key=lambda x: x.date_debut)
 
     return render(request, "dashboard/dp.html", {
-        "donnees": donnees
+        "donnees": donnees,
     })
