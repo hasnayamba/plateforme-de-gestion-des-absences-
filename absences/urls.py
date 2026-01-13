@@ -47,7 +47,6 @@ urlpatterns = [
     path("drh/absences/<int:absence_id>/annuler/",views.annuler_absence_drh,name="annuler_absence_drh"),
     path("drh/quotas/ajuster/", views.ajuster_quota, name="ajuster_quota"),
     path('drh/reporter-quotas/', views.reporter_quotas, name='reporter_quotas'),
-    path('dp/recap/', views.recap_absences_dp, name='recap_absences_dp'),
 
 
 
