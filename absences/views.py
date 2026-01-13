@@ -1053,48 +1053,93 @@ def dashboard_dp(request):
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
     
-        # =====================
-    # RÉCAP ABSENCES + RÉCUPÉRATIONS (IMPRESSION)
-    # =====================
-    aujourd_hui = date.today()
+# ============================
+    # FILTRES RÉCAP
+    # ============================
+    mois_recap = request.GET.get('mois_recap')
+    type_recap = request.GET.get('type_recap')
+    collab_recap = request.GET.get('collab_recap')
+    statut_recap = request.GET.get('statut_recap')
+
+    # ============================
+    # ABSENCES (TOUTES)
+    # ============================
+    absences_qs = Absence.objects.select_related(
+        'collaborateur', 'type_absence'
+    )
+
+    if mois_recap:
+        absences_qs = absences_qs.filter(date_debut__month=mois_recap)
+
+    if type_recap:
+        absences_qs = absences_qs.filter(type_absence_id=type_recap)
+
+    if collab_recap:
+        absences_qs = absences_qs.filter(collaborateur_id=collab_recap)
+
+    if statut_recap:
+        absences_qs = absences_qs.filter(statut=statut_recap)
+
+    # ============================
+    # RÉCUPÉRATIONS
+    # ============================
+    recups_qs = Recuperation.objects.select_related('utilisateur')
+
+    if mois_recap:
+        recups_qs = recups_qs.filter(date_debut__month=mois_recap)
+
+    if collab_recap:
+        recups_qs = recups_qs.filter(utilisateur_id=collab_recap)
+
+    if statut_recap:
+        recups_qs = recups_qs.filter(statut=statut_recap)
+
+    # ============================
+    # FUSION DES DONNÉES
+    # ============================
     donnees = []
 
-    # Absences validées DP
-    for a in Absence.objects.filter(statut='valide_dp').select_related(
-        'collaborateur', 'type_absence'
-    ):
+    for a in absences_qs:
         try:
             date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
         except Exception:
             date_fin = a.date_debut
 
-        if date_fin <= aujourd_hui:
-            continue
-
-        a.date_fin_calculee = date_fin
         a.type_demande = "Absence"
+        a.date_fin_calculee = date_fin
         donnees.append(a)
 
-    # Récupérations
-    for r in Recuperation.objects.filter(
-        statut__in=['verifie_drh', 'valide']
-    ).select_related('utilisateur'):
-
+    for r in recups_qs:
         try:
             date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
         except Exception:
             date_fin = r.date_debut
 
-        if date_fin <= aujourd_hui:
-            continue
-
-        r.date_fin_calculee = date_fin
         r.type_demande = "Récupération"
+        r.date_fin_calculee = date_fin
         donnees.append(r)
 
     donnees.sort(key=lambda x: x.date_debut)
 
+    # ============================
+    # DONNÉES POUR FILTRES
+    # ============================
+    types = TypeAbsence.objects.all()
+    collaborateurs = Profile.objects.select_related('user')
+    mois_list = [(i, month_name[i]) for i in range(1, 13)]
+
     context = {
+        "donnees": donnees,
+        # filtres
+        "types": types,
+        "collaborateurs": collaborateurs,
+        "statuts": STATUT_ABSENCE,
+        "mois_list": mois_list,
+        # valeurs sélectionnées
+        "mois_recap": mois_recap,
+        "type_recap": type_recap,
+        "collab_recap": collab_recap,
+        "statut_recap": statut_recap,
         'absences_planifiees': absences_planifiees,
         'absences_a_valider_dp': absences_a_valider_dp,
         'absences_validees': absences_validees,
@@ -1107,7 +1152,6 @@ def dashboard_dp(request):
         'historiques': historiques,
         'recuperations': recuperations,
         'page_obj': page_obj,
-        "donnees": donnees,
     }
     return render(request, 'dashboard/dp.html', context)
 
@@ -1655,56 +1699,3 @@ def ajuster_quota(request):
     return redirect('dashboard_drh')
 
 
-@login_required
-def recap_absences_dp(request):
-    aujourd_hui = date.today()
-    donnees = []
-
-    # =====================
-    # ABSENCES
-    # =====================
-    absences = Absence.objects.filter(statut='valide_dp').select_related(
-        'collaborateur', 'type_absence'
-    )
-
-    for a in absences:
-        # 🔥 calcul date_fin EXACTEMENT comme ailleurs
-        try:
-            date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
-        except Exception:
-            date_fin = a.date_debut
-
-        # ❌ exclure si ça finit aujourd’hui ou avant
-        if date_fin <= aujourd_hui:
-            continue
-
-        a.date_fin_calculee = date_fin
-        a.type_demande = "Absence"
-        donnees.append(a)
-
-    # =====================
-    # RÉCUPÉRATIONS
-    # =====================
-    recuperations = Recuperation.objects.filter(
-        statut__in=['verifie_drh', 'valide']
-    ).select_related('utilisateur')
-
-    for r in recuperations:
-        try:
-            date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
-        except Exception:
-            date_fin = r.date_debut
-
-        if date_fin <= aujourd_hui:
-            continue
-
-        r.date_fin_calculee = date_fin
-        r.type_demande = "Récupération"
-        donnees.append(r)
-
-    # Tri par date
-    donnees.sort(key=lambda x: x.date_debut)
-
-    return render(request, "dashboard/dp.html", {
-        "donnees": donnees,
-    })

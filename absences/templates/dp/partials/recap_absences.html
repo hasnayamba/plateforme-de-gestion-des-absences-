@@ -1,6 +1,48 @@
 
 
 <div class="container mt-4">
+    <form method="get" class="row g-2 mb-3">
+  <div class="col-md-2">
+    <select name="mois_recap" class="form-select">
+      <option value="">Mois</option>
+      {% for i, m in mois_list %}
+      <option value="{{ i }}" {% if mois_selectionne == i %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <select name="type_recap" class="form-select">
+      <option value="">Type d'absence</option>
+      {% for t in types %}
+      <option value="{{ t.id }}">{{ t.nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <select name="collab_recap" class="form-select">
+      <option value="">Collaborateur</option>
+      {% for p in collaborateurs %}
+      <option value="{{ p.user.id }}">{{ p.user.get_full_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-2">
+    <select name="statut_recap" class="form-select">
+      <option value="">Statut</option>
+      {% for key, label in statuts %}
+      <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-2">
+    <button class="btn btn-primary w-100">Filtrer</button>
+  </div>
+</form>
+
 <h5 class="mt-4">📋 Récapitulatif absences & récupérations à partir d’aujourd’hui</h5>
 
 <button class="btn btn-secondary mb-3" onclick="window.print()">
