@@ -171,21 +171,35 @@ def logout_view(request):
 # -----------------------------
 # Dashboard pour les supérieurs
 # -----------------------------
-
 @login_required
 def dashboard_superieur(request):
-    profil = Profile.objects.get(user=request.user)
-    collaborateurs = Profile.objects.filter(superieur=request.user, role='collaborateur').values_list('user', flat=True)
 
+    profil = Profile.objects.get(user=request.user)
+
+    # Récupère les collaborateurs ET les supérieurs
+    # dont le supérieur hiérarchique est l'utilisateur connecté
+    collaborateurs = Profile.objects.filter(
+        superieur=request.user,
+        role__in=['collaborateur', 'superieur']
+    ).values_list('user', flat=True)
+
+    # Absences en attente de validation du supérieur
     absences_en_attente = Absence.objects.filter(
         collaborateur__in=collaborateurs,
         statut='verifie_drh'
-    ).select_related('collaborateur', 'type_absence').prefetch_related('historiques')
+    ).select_related(
+        'collaborateur',
+        'type_absence'
+    ).prefetch_related('historiques')
 
+    # Absences déjà approuvées
     absences_approuvees = Absence.objects.filter(
         collaborateur__in=collaborateurs,
         statut='valide_dp'
-    ).select_related('collaborateur', 'type_absence')
+    ).select_related(
+        'collaborateur',
+        'type_absence'
+    )
 
     if request.method == 'POST':
         absence_id = request.POST.get('absence_id')
@@ -193,13 +207,22 @@ def dashboard_superieur(request):
         motif = request.POST.get('motif', '').strip()
 
         try:
-            absence = Absence.objects.get(id=absence_id)
+            # Sécurisation : on vérifie que l'absence appartient bien
+            # à un subordonné de ce supérieur
+            absence = Absence.objects.get(
+                id=absence_id,
+                collaborateur__in=collaborateurs
+            )
+
             if decision == 'valider':
                 absence.statut = 'approuve_superieur'
+
             elif decision == 'rejeter':
                 absence.statut = 'rejete'
                 absence.motif_rejet = motif
+
             absence.save()
+
             ValidationHistorique.objects.create(
                 absence=absence,
                 utilisateur=request.user,
@@ -207,17 +230,19 @@ def dashboard_superieur(request):
                 decision=decision,
                 motif=motif if decision == 'rejeter' else ''
             )
+
             messages.success(request, f"Demande {decision} avec succès.")
             return redirect('dashboard_superieur')
+
         except Absence.DoesNotExist:
-            messages.error(request, "Demande introuvable.")
+            messages.error(request, "Demande introuvable ou non autorisée.")
 
     context = {
         'absences': absences_en_attente,
         'absences_approuvees': absences_approuvees
     }
-    return render(request, 'dashboard/superieurs.html', context)
 
+    return render(request, 'dashboard/superieurs.html', context)
 # -----------------------------
 # Dashboard pour les collaborateurs
 # -----------------------------
