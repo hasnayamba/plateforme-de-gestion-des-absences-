@@ -55,7 +55,7 @@ def accueil_public(request):
     utilisateurs = User.objects.filter(
         profile__actif=True
     ).filter(
-        Q(absences__statut__in=["verifie_drh", "valider", "approuve_superieur", "valide_dp"]) | Q(recuperation__isnull=False)
+        Q(absences__statut__in=["verifie_drh", "valide", "approuve_superieur", "valide_dp"]) | Q(recuperation__isnull=False)
     ).distinct().order_by("last_name")
 
     lignes = []
