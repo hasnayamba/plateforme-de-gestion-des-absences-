@@ -64,7 +64,7 @@ def accueil_public(request):
         # Absences encore valides (non terminées)
         absences = Absence.objects.filter(
             collaborateur=user,
-            statut__in=["verifie_drh","valider","approuve_superieur", "valide_dp"],
+            statut__in=["verifie_drh","valide","approuve_superieur", "valide_dp"],
             date_fin__gte=date.today()  # exclut les absences expirées
         ).order_by("date_debut")
 
