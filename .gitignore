@@ -31,8 +31,7 @@ __pycache__/
 
 # Django static/media files (optionnel selon usage)
 staticfiles/
-media/
-static/
+
 
 # Collected static files
 static_root/
