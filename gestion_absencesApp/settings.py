@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "qhO106Ry4B")  # Pour tests locaux uniquement
 
 # --- Mode DEBUG ---
-DEBUG = True  # ⚠️ Passe à False en production
+DEBUG = False  # ⚠️ Passe à False en production
 ALLOWED_HOSTS = ["gestionabsences.azurewebsites.net", "127.0.0.1", "localhost"]
 
 # --- Applications Django ---
@@ -39,6 +39,10 @@ MIDDLEWARE = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 ROOT_URLCONF = 'gestion_absencesApp.urls'
 
@@ -102,6 +106,8 @@ AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
 
 DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
 MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
+
+
 
 
 # Note : MEDIA_ROOT n'est plus utilisé, tout passe par Azure Blob
