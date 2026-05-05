@@ -2,16 +2,14 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Gestion des Absences{% endblock %}</title>
+    <meta charset="UTF-8">
+    <title>Gestion des Absences - Accueil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-
+  </head>
 <style>
+
 /* ========================
    🎨 VARIABLES SWISSCONTACT
 ======================== */
@@ -20,49 +18,22 @@
     --secondary: #0073CF;
     --light-bg: #F4F7FB;
     --white: #FFFFFF;
-    --text-dark: #2C3E50;
     --border: #E5EAF0;
+    --text: #2C3E50;
+    --gray: #6C7A89;
 }
 
 /* ========================
    GLOBAL
 ======================== */
-body, html {
-    height: 100%;
-    margin: 0;
+body {
     background: linear-gradient(135deg, #f4f7fb, #eef3f9);
     font-family: 'Segoe UI', sans-serif;
+    color: var(--text);
 }
 
 /* ========================
-   WRAPPER
-======================== */
-#page-wrapper {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-/* ========================
-   NAVBAR (UPGRADE)
-======================== */
-.navbar {
-    background: linear-gradient(90deg, var(--primary), var(--secondary)) !important;
-    height: 70px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-}
-
-.navbar-brand span {
-    font-size: 13px;
-    opacity: 0.9;
-}
-
-.navbar-brand strong {
-    font-size: 15px;
-}
-
-/* ========================
-   NAV LINKS
+   NAVBAR (PLUS PRO)
 ======================== */
 .navbar {
     background: linear-gradient(90deg, var(--primary), var(--secondary)) !important;
@@ -76,171 +47,254 @@ body, html {
     letter-spacing: 0.3px;
 }
 
-/* ========================
-   MAIN CONTENT
-======================== */
-main {
-    flex-grow: 1;
-    margin-top: 90px;
-    margin-bottom: 40px;
+/* Bouton login */
+.btn-outline-light {
+    border-radius: 8px;
+    padding: 6px 14px;
+    transition: 0.25s;
 }
 
-/* ========================
-   CARD STYLE (GLOBAL)
-======================== */
-.card {
-    border: none;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-    transition: 0.3s;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-}
-
-/* ========================
-   LOGIN BOX
-======================== */
-.login-box {
-    max-width: 400px;
-    margin: auto;
-    padding: 35px;
+.btn-outline-light:hover {
     background-color: white;
-    border-radius: 18px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    color: var(--primary);
+    transform: translateY(-1px);
 }
 
 /* ========================
-   BUTTONS
+   TITRE
 ======================== */
-.btn-primary {
-    background: var(--primary);
-    border: none;
-    border-radius: 8px;
-}
-
-.btn-primary:hover {
-    background: var(--secondary);
-}
-
-.btn-outline-primary {
-    border-radius: 8px;
+h3 {
+    font-weight: 600;
+    color: var(--primary);
 }
 
 /* ========================
-   TABLES
+   TABLE CONTAINER (EFFET CARD)
 ======================== */
 .table {
-    border-radius: 10px;
+    background: white;
+    border-radius: 16px;
     overflow: hidden;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.06);
 }
 
+/* ========================
+   HEADER TABLE (GRIS PRO)
+======================== */
 .table thead {
-    background: var(--primary);
+    background: linear-gradient(90deg, #6C7A89, #5A6B7A);
     color: white;
+    border-bottom: 3px solid var(--primary);
+}
+
+.table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px;
 }
 
 /* ========================
-   ALERTS
+   TABLE BODY
 ======================== */
-.alert {
+.table td {
+    vertical-align: middle;
+    padding: 10px;
+}
+
+/* Hover propre */
+.table-hover tbody tr:hover {
+    background-color: #f1f5fb;
+    transition: 0.2s;
+}
+
+/* Bordures plus soft */
+.table-bordered {
+    border: 1px solid var(--border);
+}
+
+/* ========================
+   NOM COLLABORATEUR
+======================== */
+td.fw-bold {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ========================
+   BADGES (STYLE SAAS)
+======================== */
+.badge {
     border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+/* Harmonisation couleurs */
+.bg-primary {
+    background: var(--primary) !important;
+}
+
+.bg-success {
+    background: #28a745 !important;
+}
+
+.bg-warning {
+    background: #ffc107 !important;
+    color: #000 !important;
+}
+
+.bg-secondary {
+    background: #6c757d !important;
+}
+
+.bg-info {
+    background: #17a2b8 !important;
 }
 
 /* ========================
-   FOOTER
+   CASE VIDE
 ======================== */
-footer {
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    color: white;
-    text-align: center;
-    padding: 15px 0;
+.text-muted {
+    opacity: 0.6;
+    font-style: italic;
 }
 
 /* ========================
-   USER ICON STYLE
+   LEGENDE (PLUS CLEAN)
 ======================== */
-.bi-person-circle {
-    font-style: normal;
-    background: rgba(255,255,255,0.15);
-    padding: 6px 12px;
-    border-radius: 20px;
+.mb-3.text-center {
+    margin-top: 25px;
 }
+
+.mb-3.text-center .badge {
+    margin: 4px;
+    padding: 6px 10px;
+}
+
+/* ========================
+   RESPONSIVE BONUS
+======================== */
+.table {
+    min-width: 900px;
+}
+
+.container {
+    overflow-x: auto;
+}
+
 </style>
-</head>
+<body class="bg-light">
 
-<body>
-    <div id="page-wrapper">
+    <!-- Barre de navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
 
-        <nav class="navbar navbar-expand-lg fixed-top px-4">
+        <!-- LOGO + NOM -->
         <a class="navbar-brand d-flex align-items-center" href="#">
             <img src="{% static 'images/logo-swisscontact.png' %}" 
-                alt="Swisscontact" 
-                height="40" 
-                class="me-3">
+                 alt="Swisscontact" 
+                 height="40" 
+                 class="me-2">
             <div class="d-flex flex-column">
-                {% comment %} <span style="font-size:14px;">Swisscontact</span> {% endcomment %}
-                <strong style="font-size:16px;">Gestion des absences</strong>
+                <strong style="font-size:15px;">Gestion des absences</strong>
             </div>
         </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item me-3 text-white">
-                        <i class="bi bi-person-circle">
-                            {{ request.user.first_name }} {{ request.user.last_name }}
-                        </i> 
-                        
-                    </li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_collaborateur' %}">Accueil</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'soumettre_absence' %}">Soumettre une absence</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'mes_absences' %}">Mes absences</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'mon_quota' %}">Mon quota</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning" href="{% url 'logout' %}">Déconnexion</a></li>
-                </ul>
-            </div>
-        </nav>
-
-        <main class="container mt-3">
-            <!-- Bouton retour dashboard selon rôle -->
-            {% if request.user.profile.role == 'collaborateur' %}
-                <a href="{% url 'dashboard_collaborateur' %}" class="btn btn-outline-primary mb-3">&larr; Retour</a>
-            {% elif request.user.profile.role == 'drh' %}
-                <a href="{% url 'dashboard_drh' %}" class="btn btn-outline-primary mb-3">&larr; Retour</a>
-            {% elif request.user.profile.role == 'dp' %}
-                <a href="{% url 'dashboard_dp' %}" class="btn btn-outline-primary mb-3">&larr; Retour</a>
-            {% elif request.user.profile.role == 'superieur' %}
-                <a href="{% url 'dashboard_superieur' %}" class="btn btn-outline-primary mb-3">&larr; Retour</a>
-            {% endif %}
-
-            {% block content %}
-               {% if messages %}
-                    <div class="mt-4">
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endblock %}
-        </main>
-
-        <footer>
-            <div class="container">
-                <p class="mb-0">© 2025 Swisscontact. Tous droits réservés.</p>
-            </div>
-        </footer>
+        <!-- BOUTON LOGIN -->
+        <div class="d-flex">
+            <a href="/login/" class="btn btn-outline-light">
+                <i class="bi bi-box-arrow-in-right me-1"></i>
+                Se connecter
+            </a>
+        </div>
 
     </div>
+</nav>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div class="container mt-4">
+
+  <h3 class="mb-4 text-center">📅 Tableau récapitulatif des absences et récupérations</h3>
+  <table class="table table-bordered table-striped table-hover align-middle">
+    <thead class="text-center">
+      <tr>
+        <th>Collaborateur</th>
+        {% for mois in mois_noms %}
+          <th>{{ mois }}</th>
+        {% endfor %}
+        
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for ligne in lignes %}
+        <tr>
+          <td class="fw-bold">{{ ligne.user.get_full_name }}</td>
+
+          {% for abs_mois in ligne.mois %}
+            <td class="text-center">
+              {% if abs_mois %}
+                {% for absence in abs_mois %}
+                  
+                  {% if absence.obj_type == "Absence" %}
+                    {% if absence.statut == "approuve_superieur" %}
+                      <span class="badge bg-primary text-white d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+
+                    {% elif absence.statut == "verifie_drh" %}
+                      <span class="badge bg-warning text-dark d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+
+                    {% elif absence.statut == "valide_dp" %}
+                      <span class="badge bg-success text-white d-block mb-1">
+                        {{ absence.type_absence.nom }}<br>
+                        ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                      </span>
+                    {% endif %}
+                  
+                  {% elif absence.obj_type == "Recuperation" and absence.statut == "valide" %}
+                    <span class="badge bg-info text-dark d-block mb-1">
+                      Récupération<br>
+                      ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                    </span>
+
+                  {% elif absence.obj_type == "Recuperation" and absence.statut == "verifie_drh" %}
+                    <span class="badge bg-secondary text-dark d-block mb-1">
+                      Récupération<br>
+                      ({{ absence.date_debut|date:"d/m" }} → {{ absence.date_fin|date:"d/m" }})
+                    </span>
+                  {% endif %}
+
+                {% endfor %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="14" class="text-center text-muted">Aucune absence ni récupération à afficher.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- 🟦 Légende -->
+  <div class="mb-3 text-center">
+    <span class="badge bg-warning text-dark me-2">Vérifié par RH</span>
+    <span class="badge bg-primary text-white me-2">Approuvé par Supérieur</span>
+    <span class="badge bg-success text-white me-2">Validé par DP</span>
+    <span class="badge bg-secondary text-dark">Récupération validée RH</span>
+    <span class="badge bg-info text-dark">Récupération validée</span>
+  </div>
+
 </body>
 </html>
