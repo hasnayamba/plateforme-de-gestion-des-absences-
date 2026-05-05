@@ -7,42 +7,205 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
+  </head>
+<style>
 
-  <style>
-.navbar-brand img {
-    object-fit: contain;
+/* ========================
+   🎨 VARIABLES SWISSCONTACT
+======================== */
+:root {
+    --primary: #005AA9;
+    --secondary: #0073CF;
+    --light-bg: #F4F7FB;
+    --white: #FFFFFF;
+    --border: #E5EAF0;
+    --text: #2C3E50;
+    --gray: #6C7A89;
 }
 
-.navbar-brand span {
-    color: #ccc;
-    line-height: 1;
+/* ========================
+   GLOBAL
+======================== */
+body {
+    background: linear-gradient(135deg, #f4f7fb, #eef3f9);
+    font-family: 'Segoe UI', sans-serif;
+    color: var(--text);
+}
+
+/* ========================
+   NAVBAR (PLUS PRO)
+======================== */
+.navbar {
+    background: linear-gradient(90deg, var(--primary), var(--secondary)) !important;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    padding: 12px 24px;
 }
 
 .navbar-brand strong {
-    line-height: 1;
+    color: white;
+    font-size: 15px;
+    letter-spacing: 0.3px;
 }
+
+/* Bouton login */
+.btn-outline-light {
+    border-radius: 8px;
+    padding: 6px 14px;
+    transition: 0.25s;
+}
+
+.btn-outline-light:hover {
+    background-color: white;
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+/* ========================
+   TITRE
+======================== */
+h3 {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* ========================
+   TABLE CONTAINER (EFFET CARD)
+======================== */
+.table {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+}
+
+/* ========================
+   HEADER TABLE (GRIS PRO)
+======================== */
+.table thead {
+    background: linear-gradient(90deg, #6C7A89, #5A6B7A);
+    color: white;
+    border-bottom: 3px solid var(--primary);
+}
+
+.table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 12px;
+}
+
+/* ========================
+   TABLE BODY
+======================== */
+.table td {
+    vertical-align: middle;
+    padding: 10px;
+}
+
+/* Hover propre */
+.table-hover tbody tr:hover {
+    background-color: #f1f5fb;
+    transition: 0.2s;
+}
+
+/* Bordures plus soft */
+.table-bordered {
+    border: 1px solid var(--border);
+}
+
+/* ========================
+   NOM COLLABORATEUR
+======================== */
+td.fw-bold {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ========================
+   BADGES (STYLE SAAS)
+======================== */
+.badge {
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+/* Harmonisation couleurs */
+.bg-primary {
+    background: var(--primary) !important;
+}
+
+.bg-success {
+    background: #28a745 !important;
+}
+
+.bg-warning {
+    background: #ffc107 !important;
+    color: #000 !important;
+}
+
+.bg-secondary {
+    background: #6c757d !important;
+}
+
+.bg-info {
+    background: #17a2b8 !important;
+}
+
+/* ========================
+   CASE VIDE
+======================== */
+.text-muted {
+    opacity: 0.6;
+    font-style: italic;
+}
+
+/* ========================
+   LEGENDE (PLUS CLEAN)
+======================== */
+.mb-3.text-center {
+    margin-top: 25px;
+}
+
+.mb-3.text-center .badge {
+    margin: 4px;
+    padding: 6px 10px;
+}
+
+/* ========================
+   RESPONSIVE BONUS
+======================== */
+.table {
+    min-width: 900px;
+}
+
+.container {
+    overflow-x: auto;
+}
+
 </style>
-  </head>
 <body class="bg-light">
 
     <!-- Barre de navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
 
+        <!-- LOGO + NOM -->
         <a class="navbar-brand d-flex align-items-center" href="#">
             <img src="{% static 'images/logo-swisscontact.png' %}" 
-                 alt="Swisscontact"
+                 alt="Swisscontact" 
                  height="40" 
                  class="me-2">
-
             <div class="d-flex flex-column">
-                <span style="font-size:12px; color:#ccc;">Swisscontact</span>
                 <strong style="font-size:15px;">Gestion des absences</strong>
             </div>
         </a>
 
+        <!-- BOUTON LOGIN -->
         <div class="d-flex">
-            <a href="{% url 'login' %}" class="btn btn-outline-light">
+            <a href="/login/" class="btn btn-outline-light">
                 <i class="bi bi-box-arrow-in-right me-1"></i>
                 Se connecter
             </a>
@@ -50,11 +213,12 @@
 
     </div>
 </nav>
+
 <div class="container mt-4">
 
   <h3 class="mb-4 text-center">📅 Tableau récapitulatif des absences et récupérations</h3>
   <table class="table table-bordered table-striped table-hover align-middle">
-    <thead class="table-dark text-center">
+    <thead class="text-center">
       <tr>
         <th>Collaborateur</th>
         {% for mois in mois_noms %}

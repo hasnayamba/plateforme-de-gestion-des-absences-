@@ -11,107 +11,201 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
 
-    <style>
-        /* Reset and base */
-        body, html {
-            height: 100%;
-            background-color: #f8f9fa;
-            margin: 0;
-        }
-
-        /* Wrapper to keep footer bottom */
-        #page-wrapper {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Main content grows */
-        main {
-            flex-grow: 1;
-            margin-top: 80px;
-            margin-bottom: 40px;
-        }
-
-        /* Login box style (if used) */
-        .login-box {
-            max-width: 400px;
-            margin: auto;
-            padding: 30px;
-            background-color: white;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-        }
-
-        footer {
-            background-color: #343a40;
-            color: white;
-            text-align: center;
-            padding: 15px 0;
-            flex-shrink: 0;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .navbar-brand img {
-            object-fit: contain;
-        }
-
-        .navbar-brand span {
-    font-weight: 500;
-    font-size: 13px;
-    color: #adb5bd;
+<style>
+/* ========================
+   🎨 VARIABLES SWISSCONTACT
+======================== */
+:root {
+    --primary: #005AA9;
+    --secondary: #0073CF;
+    --light-bg: #F4F7FB;
+    --white: #FFFFFF;
+    --text-dark: #2C3E50;
+    --border: #E5EAF0;
 }
-  
-    </style>
+
+/* ========================
+   GLOBAL
+======================== */
+body, html {
+    height: 100%;
+    margin: 0;
+    background: linear-gradient(135deg, #f4f7fb, #eef3f9);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* ========================
+   WRAPPER
+======================== */
+#page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========================
+   NAVBAR (UPGRADE)
+======================== */
+.navbar {
+    background: linear-gradient(90deg, var(--primary), var(--secondary)) !important;
+    height: 70px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.navbar-brand span {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.navbar-brand strong {
+    font-size: 15px;
+}
+
+/* ========================
+   NAV LINKS
+======================== */
+.navbar .nav-link {
+    color: white !important;
+    margin: 0 5px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.navbar .nav-link:hover {
+    background-color: rgba(255,255,255,0.15);
+}
+
+/* ========================
+   MAIN CONTENT
+======================== */
+main {
+    flex-grow: 1;
+    margin-top: 90px;
+    margin-bottom: 40px;
+}
+
+/* ========================
+   CARD STYLE (GLOBAL)
+======================== */
+.card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* ========================
+   LOGIN BOX
+======================== */
+.login-box {
+    max-width: 400px;
+    margin: auto;
+    padding: 35px;
+    background-color: white;
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* ========================
+   BUTTONS
+======================== */
+.btn-primary {
+    background: var(--primary);
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: var(--secondary);
+}
+
+.btn-outline-primary {
+    border-radius: 8px;
+}
+
+/* ========================
+   TABLES
+======================== */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: var(--primary);
+    color: white;
+}
+
+/* ========================
+   ALERTS
+======================== */
+.alert {
+    border-radius: 10px;
+}
+
+/* ========================
+   FOOTER
+======================== */
+footer {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    color: white;
+    text-align: center;
+    padding: 15px 0;
+}
+
+/* ========================
+   USER ICON STYLE
+======================== */
+.bi-person-circle {
+    font-style: normal;
+    background: rgba(255,255,255,0.15);
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+</style>
 </head>
 
 <body>
     <div id="page-wrapper">
 
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-    <div class="container-fluid px-4">
-
+        <nav class="navbar navbar-expand-lg fixed-top px-4">
         <a class="navbar-brand d-flex align-items-center" href="#">
             <img src="{% static 'images/logo-swisscontact.png' %}" 
-                 alt="Swisscontact" 
-                 height="40" 
-                 class="me-3">
-
+                alt="Swisscontact" 
+                height="40" 
+                class="me-3">
             <div class="d-flex flex-column">
-                <span style="font-size:13px; color:#adb5bd;">Swisscontact</span>
+                {% comment %} <span style="font-size:14px;">Swisscontact</span> {% endcomment %}
                 <strong style="font-size:16px;">Gestion des absences</strong>
             </div>
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav ms-auto align-items-center">
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-white">
+                        <i class="bi bi-person-circle">
+                            {{ request.user.first_name }} {{ request.user.last_name }}
+                        </i> 
+                        
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_collaborateur' %}">Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'soumettre_absence' %}">Soumettre une absence</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'mes_absences' %}">Mes absences</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'mon_quota' %}">Mon quota</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="{% url 'logout' %}">Déconnexion</a></li>
+                </ul>
+            </div>
+        </nav>
 
-                {% if request.user.is_authenticated %}
-                <li class="nav-item me-3 text-white">
-                    <i class="bi bi-person-circle me-1"></i>
-                    {{ request.user.first_name }} {{ request.user.last_name }}
-                </li>
-                {% endif %}
-
-                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_collaborateur' %}">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'soumettre_absence' %}">Soumettre</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'mes_absences' %}">Mes absences</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'mon_quota' %}">Quota</a></li>
-                <li class="nav-item"><a class="nav-link text-warning" href="{% url 'logout' %}">Déconnexion</a></li>
-
-            </ul>
-        </div>
-
-    </div>
-</nav>
         <main class="container mt-3">
             <!-- Bouton retour dashboard selon rôle -->
             {% if request.user.profile.role == 'collaborateur' %}
