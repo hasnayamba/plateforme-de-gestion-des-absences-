@@ -1577,7 +1577,7 @@ def supprimer_jour_ferie(request, jour_id):
 # ============================
 def calculer_date_fin(date_debut, nombre_jours):
 
-    jours_restants = float(nombre_jours)
+    jours_restants = Decimal(nombre_jours)
 
     date_courante = date_debut
 
@@ -1587,11 +1587,11 @@ def calculer_date_fin(date_debut, nombre_jours):
         if date_courante.weekday() < 5:
 
             # demi-journée
-            if jours_restants == 0.5:
-                jours_restants -= 0.5
+            if jours_restants >= Decimal('1'):
+                jours_restants -= Decimal('1')
 
-            else:
-                jours_restants -= 1
+            elif jours_restants == Decimal('0.5'):
+                jours_restants -= Decimal('0.5')
 
         # continuer tant qu'il reste des jours
         if jours_restants > 0:
@@ -1645,7 +1645,9 @@ def soumettre_recuperation(request):
             "%Y-%m-%d"
         ).date()
 
-        nombre_jours_decimal = Decimal(nombre_jours)
+        nombre_jours_decimal = Decimal(
+        nombre_jours.replace(',', '.')
+    )
 
         # ============================
         # VALIDATION JOURS
@@ -1677,6 +1679,10 @@ def soumettre_recuperation(request):
             date_debut_obj,
             nombre_jours_decimal
         )
+        
+        print("FILES =", request.FILES)
+        print("JUSTIFICATIF =", justificatif)
+        print("DATE FIN =", date_fin)
 
         # ============================
         # CREATION
