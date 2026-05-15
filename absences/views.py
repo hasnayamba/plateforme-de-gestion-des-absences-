@@ -1572,39 +1572,141 @@ def supprimer_jour_ferie(request, jour_id):
     messages.success(request, "Jour férié supprimé.")
     return redirect('configuration_view')
 
+# ============================
+# CALCUL DATE FIN (weekends exclus)
+# ============================
+def calculer_date_fin(date_debut, nombre_jours):
+
+    jours_restants = float(nombre_jours)
+
+    date_courante = date_debut
+
+    while jours_restants > 0:
+
+        # 0=Lundi ... 4=Vendredi
+        if date_courante.weekday() < 5:
+
+            # demi-journée
+            if jours_restants == 0.5:
+                jours_restants -= 0.5
+
+            else:
+                jours_restants -= 1
+
+        # continuer tant qu'il reste des jours
+        if jours_restants > 0:
+            date_courante += timedelta(days=1)
+
+    return date_courante
+
+
+# ============================
+# SOUMISSION RECUPERATION
+# ============================
 @login_required
 def soumettre_recuperation(request):
-    if request.method == 'POST':
+
+    if request.method != 'POST':
+        return redirect('dashboard_collaborateur')
+
+    try:
+
         motif = request.POST.get('motif')
         date_debut = request.POST.get('date_debut')
         nombre_jours = request.POST.get('nombre_jours')
         justificatif = request.FILES.get('justificatif')
 
-        if not (motif and date_debut and nombre_jours and justificatif):
-            messages.error(request, "Tous les champs sont requis.")
-            return redirect('dashboard_collaborateur')  # ou page actuelle
+        # ============================
+        # VALIDATIONS
+        # ============================
 
-        try:
-            date_debut_obj = datetime.strptime(date_debut, "%Y-%m-%d").date()
-            nombre_jours_float = float(nombre_jours)
-        except ValueError:
-            messages.error(request, "Format de date ou nombre de jours invalide.")
+        if not motif:
+            messages.error(request, "Le motif est obligatoire.")
             return redirect('dashboard_collaborateur')
 
-        # Créer la récupération
-        Recuperation.objects.create(
-            utilisateur=request.user,  # <=== au lieu de collaborateur
-            motif=motif,
-            date_debut=date_debut_obj,
-            nombre_jours=nombre_jours_float,
-            justificatif=justificatif
+        if not date_debut:
+            messages.error(request, "La date de début est obligatoire.")
+            return redirect('dashboard_collaborateur')
+
+        if not nombre_jours:
+            messages.error(request, "Le nombre de jours est obligatoire.")
+            return redirect('dashboard_collaborateur')
+
+        if not justificatif:
+            messages.error(request, "Le justificatif est obligatoire.")
+            return redirect('dashboard_collaborateur')
+
+        # ============================
+        # CONVERSIONS
+        # ============================
+
+        date_debut_obj = datetime.strptime(
+            date_debut,
+            "%Y-%m-%d"
+        ).date()
+
+        nombre_jours_decimal = Decimal(nombre_jours)
+
+        # ============================
+        # VALIDATION JOURS
+        # ============================
+
+        if nombre_jours_decimal <= 0:
+            messages.error(
+                request,
+                "Le nombre de jours doit être supérieur à 0."
+            )
+            return redirect('dashboard_collaborateur')
+
+        # ============================
+        # INTERDIRE WEEKEND AU DEBUT
+        # ============================
+
+        if date_debut_obj.weekday() >= 5:
+            messages.error(
+                request,
+                "La récupération ne peut pas commencer un weekend."
+            )
+            return redirect('dashboard_collaborateur')
+
+        # ============================
+        # CALCUL DATE FIN
+        # ============================
+
+        date_fin = calculer_date_fin(
+            date_debut_obj,
+            nombre_jours_decimal
         )
 
-        messages.success(request, "Récupération soumise avec succès !")
+        # ============================
+        # CREATION
+        # ============================
+
+        Recuperation.objects.create(
+            utilisateur=request.user,
+            motif=motif,
+            justificatif=justificatif,
+            date_debut=date_debut_obj,
+            nombre_jours=nombre_jours_decimal,
+            date_fin=date_fin,
+            statut='en_attente'
+        )
+
+        messages.success(
+            request,
+            "Votre récupération a été soumise avec succès."
+        )
+
         return redirect('mes_absences')
 
-    return redirect('dashboard_collaborateur')
+    except Exception as e:
 
+        messages.error(
+            request,
+            f"Erreur lors de la soumission : {str(e)}"
+        )
+
+        return redirect('dashboard_collaborateur')
 # -----------------------------
 # Modifier une récupération
 # -----------------------------

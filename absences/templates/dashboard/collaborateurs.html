@@ -54,46 +54,119 @@
 </div>
 
 
-<!-- Modal de soumission de récupération -->
-<div class="modal fade" id="modalRecuperation" tabindex="-1" aria-labelledby="modalRecuperationLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="POST" enctype="multipart/form-data" action="{% url 'soumettre_recuperation' %}" class="modal-content">
-       {% csrf_token %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalRecuperationLabel">Soumettre une récupération</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="motif" class="form-label">Motif</label>
-          <textarea name="motif" id="motif" class="form-control" rows="3" required></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="date_debut" class="form-label">Date de début</label>
-            <input type="date" name="date_debut" id="date_debut" class="form-control" required>
-          </div>
+<!-- Modal récupération -->
+<div class="modal fade"
+     id="modalRecuperation"
+     tabindex="-1"
+     aria-hidden="true">
 
-          <div class="mb-3">
-            <label for="nombre_jours" class="form-label">Nombre de jours</label>
-            <input type="number" step="0.5" min="0.5" name="nombre_jours" id="nombre_jours" class="form-control" required>
-          </div>
-        <div class="mb-3">
-          <label for="justificatif" class="form-label">Justificatif (PDF, image, etc.)</label>
-          <input type="file" name="justificatif" id="justificatif" class="form-control" required>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Soumettre</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-      </div>
-    </form>
-  </div>
+    <div class="modal-dialog modal-lg">
+
+        <form method="POST"
+              enctype="multipart/form-data"
+              action="{% url 'soumettre_recuperation' %}"
+              class="modal-content">
+
+            {% csrf_token %}
+
+            <!-- HEADER -->
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    Soumettre une récupération
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body">
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Motif -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Motif
+                    </label>
+
+                    <textarea name="motif"
+                              class="form-control"
+                              rows="4"
+                              required></textarea>
+                </div>
+
+                <!-- Date début -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Date de début
+                    </label>
+
+                    <input type="date"
+                           name="date_debut"
+                           class="form-control"
+                           required>
+                </div>
+
+                <!-- Nombre jours -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Nombre de jours
+                    </label>
+
+                    <input type="number"
+                           step="0.5"
+                           min="0.5"
+                           name="nombre_jours"
+                           class="form-control"
+                           placeholder="Ex : 1 ou 1.5"
+                           required>
+                </div>
+
+                <!-- Justificatif -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Justificatif
+                    </label>
+
+                    <input type="file"
+                           name="justificatif"
+                           class="form-control"
+                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                           >
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Annuler
+                </button>
+
+                <button type="submit"
+                        class="btn btn-primary">
+                    Soumettre
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
 </div>
-
 
 {% endblock %}
