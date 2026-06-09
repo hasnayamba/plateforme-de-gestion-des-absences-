@@ -85,7 +85,10 @@ def accueil_public(request):
         for recup in recups:
             recup.obj_type = "Recuperation"
             try:
-                recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
+                recup.date_fin = calculer_date_fin(
+                    recup.date_debut,
+                    recup.nombre_jours
+                )
             except Exception:
                 recup.date_fin = recup.date_debut
 
@@ -1071,10 +1074,15 @@ def dashboard_dp(request):
     ).select_related('utilisateur').order_by('-date_soumission')
 
     for recup in recuperation:
-        recup.date_fin = recup.date_debut + timedelta(days=float(recup.nombre_jours) - 1)
+        recup.date_fin = calculer_date_fin(
+            recup.date_debut,
+            recup.nombre_jours
+        )
     for recupfin in recuperations_validees:
-        recupfin.date_fin = recupfin.date_debut + timedelta(days=float(recupfin.nombre_jours) - 1)
-
+        recupfin.date_fin = calculer_date_fin(
+            recupfin.date_debut,
+            recupfin.nombre_jours
+        )
     types = TypeAbsence.objects.all()
     mois_list = [(i, month_name[i]) for i in range(1, 13)]
     
@@ -1606,33 +1614,61 @@ def calculer_date_fin(date_debut, nombre_jours):
 @login_required
 def soumettre_recuperation(request):
 
+    print("\n==============================")
+    print("🚀 SOUMISSION RECUPERATION")
+    print("==============================")
+
+    # ============================
+    # VERIFICATION METHODE
+    # ============================
+    print("Méthode HTTP :", request.method)
+
     if request.method != 'POST':
+        print("❌ La requête n'est pas POST")
         return redirect('dashboard_collaborateur')
 
     try:
+
+        # ============================
+        # RECUPERATION DES DONNEES
+        # ============================
+        print("\n📥 POST DATA :", request.POST)
+        print("📂 FILES :", request.FILES)
 
         motif = request.POST.get('motif')
         date_debut = request.POST.get('date_debut')
         nombre_jours = request.POST.get('nombre_jours')
         justificatif = request.FILES.get('justificatif')
 
+        print("\n==============================")
+        print("📌 DONNEES RECUPEREES")
+        print("==============================")
+        print("Motif :", motif)
+        print("Date début :", date_debut)
+        print("Nombre jours :", nombre_jours)
+        print("Justificatif :", justificatif)
+
         # ============================
         # VALIDATIONS
         # ============================
 
         if not motif:
+            print("❌ Motif vide")
             messages.error(request, "Le motif est obligatoire.")
             return redirect('dashboard_collaborateur')
 
         if not date_debut:
+            print("❌ Date début vide")
             messages.error(request, "La date de début est obligatoire.")
             return redirect('dashboard_collaborateur')
 
         if not nombre_jours:
+            print("❌ Nombre de jours vide")
             messages.error(request, "Le nombre de jours est obligatoire.")
             return redirect('dashboard_collaborateur')
 
         if not justificatif:
+            print("❌ Justificatif manquant")
             messages.error(request, "Le justificatif est obligatoire.")
             return redirect('dashboard_collaborateur')
 
@@ -1640,20 +1676,29 @@ def soumettre_recuperation(request):
         # CONVERSIONS
         # ============================
 
+        print("\n==============================")
+        print("🔄 CONVERSIONS")
+        print("==============================")
+
         date_debut_obj = datetime.strptime(
             date_debut,
             "%Y-%m-%d"
         ).date()
 
+        print("✅ Date convertie :", date_debut_obj)
+
         nombre_jours_decimal = Decimal(
-        nombre_jours.replace(',', '.')
-    )
+            str(nombre_jours).replace(',', '.')
+        ).quantize(Decimal("0.1"))
+
+        print("✅ Nombre jours Decimal :", nombre_jours_decimal)
 
         # ============================
         # VALIDATION JOURS
         # ============================
 
         if nombre_jours_decimal <= 0:
+            print("❌ Nombre jours <= 0")
             messages.error(
                 request,
                 "Le nombre de jours doit être supérieur à 0."
@@ -1661,10 +1706,17 @@ def soumettre_recuperation(request):
             return redirect('dashboard_collaborateur')
 
         # ============================
-        # INTERDIRE WEEKEND AU DEBUT
+        # WEEKEND
         # ============================
 
+        print("\n==============================")
+        print("📅 VERIFICATION WEEKEND")
+        print("==============================")
+
+        print("Weekday :", date_debut_obj.weekday())
+
         if date_debut_obj.weekday() >= 5:
+            print("❌ Début pendant weekend")
             messages.error(
                 request,
                 "La récupération ne peut pas commencer un weekend."
@@ -1675,20 +1727,26 @@ def soumettre_recuperation(request):
         # CALCUL DATE FIN
         # ============================
 
+        print("\n==============================")
+        print("📆 CALCUL DATE FIN")
+        print("==============================")
+
         date_fin = calculer_date_fin(
             date_debut_obj,
             nombre_jours_decimal
         )
-        
-        print("FILES =", request.FILES)
-        print("JUSTIFICATIF =", justificatif)
-        print("DATE FIN =", date_fin)
+
+        print("✅ Date fin calculée :", date_fin)
 
         # ============================
-        # CREATION
+        # CREATION OBJET
         # ============================
 
-        Recuperation.objects.create(
+        print("\n==============================")
+        print("💾 CREATION RECUPERATION")
+        print("==============================")
+
+        recup = Recuperation.objects.create(
             utilisateur=request.user,
             motif=motif,
             justificatif=justificatif,
@@ -1698,14 +1756,32 @@ def soumettre_recuperation(request):
             statut='en_attente'
         )
 
+        print("✅ RECUPERATION ENREGISTREE")
+        print("ID :", recup.id)
+
+        # ============================
+        # SUCCESS
+        # ============================
+
         messages.success(
             request,
             "Votre récupération a été soumise avec succès."
         )
 
+        print("\n🎉 FIN OK\n")
+
         return redirect('mes_absences')
 
     except Exception as e:
+
+        print("\n==============================")
+        print("💥 ERREUR DETECTEE")
+        print("==============================")
+        print("Type erreur :", type(e))
+        print("Erreur :", str(e))
+
+        import traceback
+        traceback.print_exc()
 
         messages.error(
             request,
@@ -1742,7 +1818,10 @@ def modifier_recuperation(request, recup_id):
         if nombre_jours:
             recup.nombre_jours = float(nombre_jours)
         # Calcul date_fin
-        recup.date_fin = recup.date_debut + timedelta(days=recup.nombre_jours - 1)
+            recup.date_fin = calculer_date_fin(
+                recup.date_debut,
+                recup.nombre_jours
+            )
 
         recup.save()
         messages.success(request, "Récupération modifiée avec succès.")
