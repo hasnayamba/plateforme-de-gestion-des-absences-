@@ -6,11 +6,11 @@ from django.contrib import messages
 from datetime import datetime
 from django.shortcuts import render
 from datetime import timedelta
-from .utils import compter_jours_ouvres
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.http import JsonResponse
 from django.http import FileResponse, Http404
+from .utils import compter_jours_ouvres, est_jour_ouvre
 import os
 import json
 from django.core.paginator import Paginator
@@ -287,17 +287,10 @@ def soumettre_absence(request, absence_id=None):
         raison = request.POST.get('raison')
 
         # 🔥 CALCUL DATE FIN (jours ouvrés)
-        jours_restants = int(nombre_jours)
-        date_courante = date_debut
-        jours_comptes = 1
-
-        while jours_comptes < jours_restants:
-            date_courante += timedelta(days=1)
-            if date_courante.weekday() >= 5 or date_courante in jours_feries:
-                continue
-            jours_comptes += 1
-
-        date_fin = date_courante
+        date_fin = calculer_date_fin(
+        date_debut,
+        Decimal(str(nombre_jours))
+        )
 
         # Chevauchement
         conflits = Absence.objects.filter(
@@ -472,7 +465,10 @@ def mes_absences(request):
     for r in recuperations:
         r.type_demande = "Recuperation"
         try:
-            r.date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
+            r.date_fin = calculer_date_fin(
+                r.date_debut,
+                r.nombre_jours
+            )
         except Exception:
             r.date_fin = r.date_debut
 
@@ -508,19 +504,21 @@ def calendrier_absences(request):
             "color": a.type_absence.couleur,
         })
         
-    events = []
     for r in recuperation:
         try:
-            date_fin = r.date_debut + timedelta(days=float(r.nombre_jours))
+            date_fin = calculer_date_fin(
+            r.date_debut,
+            r.nombre_jours
+        )
         except Exception:
             date_fin = r.date_debut
         events.append({
-            "title": f"{r.collaborateur.get_full_name()} ({r.type_absence.nom})",
+            "title": f"{r.utilisateur.get_full_name()} (Récupération)",
             "start": r.date_debut.isoformat(),
-            "end": date_fin.isoformat(),  # FullCalendar exclut le dernier jour
-            "type": r.type_absence.nom,
-            "collaborateur": r.collaborateur.get_full_name(),
-            "color": r.type_absence.couleur,
+            "end": (date_fin + timedelta(days=1)).isoformat(),
+            "type": "Récupération",
+            "collaborateur": r.utilisateur.get_full_name(),
+            "color": "#28a745",
         })
                    
 
@@ -1134,7 +1132,10 @@ def dashboard_dp(request):
 
     for a in absences_qs:
         try:
-            date_fin = a.date_debut + timedelta(days=float(a.nombre_jours) - 1)
+            date_fin = calculer_date_fin(
+            a.date_debut,
+            a.nombre_jours
+        )
         except Exception:
             date_fin = a.date_debut
 
@@ -1144,7 +1145,10 @@ def dashboard_dp(request):
 
     for r in recups_qs:
         try:
-            date_fin = r.date_debut + timedelta(days=float(r.nombre_jours) - 1)
+            date_fin = calculer_date_fin(
+            r.date_debut,
+            r.nombre_jours
+        )
         except Exception:
             date_fin = r.date_debut
 
@@ -1586,27 +1590,22 @@ def supprimer_jour_ferie(request, jour_id):
 def calculer_date_fin(date_debut, nombre_jours):
 
     jours_restants = Decimal(nombre_jours)
-
     date_courante = date_debut
 
     while jours_restants > 0:
 
-        # 0=Lundi ... 4=Vendredi
-        if date_courante.weekday() < 5:
+        if est_jour_ouvre(date_courante):
 
-            # demi-journée
-            if jours_restants >= Decimal('1'):
-                jours_restants -= Decimal('1')
+            if jours_restants >= Decimal("1"):
+                jours_restants -= Decimal("1")
 
-            elif jours_restants == Decimal('0.5'):
-                jours_restants -= Decimal('0.5')
+            elif jours_restants == Decimal("0.5"):
+                jours_restants -= Decimal("0.5")
 
-        # continuer tant qu'il reste des jours
         if jours_restants > 0:
             date_courante += timedelta(days=1)
 
     return date_courante
-
 
 # ============================
 # SOUMISSION RECUPERATION
@@ -1824,6 +1823,7 @@ def modifier_recuperation(request, recup_id):
             )
 
         recup.save()
+        
         messages.success(request, "Récupération modifiée avec succès.")
         return redirect('mes_absences')
 
