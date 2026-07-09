@@ -502,17 +502,29 @@
   <td>{{ r.date_debut }}</td>
   <td>{{ r.nombre_jours }}</td>
    <td>{{ r.motif }}</td>
-  <td class="text-end">
+<td class="text-end">
+
     {% if r.statut == 'en_attente' %}
-    <button class="btn btn-success btn-sm"
-      data-bs-toggle="modal"
-      data-bs-target="#verifierRecup{{ r.id }}">
-      ✔ Vérifier
-    </button>
+
+        <button class="btn btn-success btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#verifierRecup{{ r.id }}">
+            ✔ Vérifier
+        </button>
+
+    {% elif r.statut == 'valide' %}
+
+        <button class="btn btn-outline-danger btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#annulerRecup{{ r.id }}">
+            ❌ Annuler
+        </button>
+
     {% else %}
-    —
+        —
     {% endif %}
-  </td>
+
+</td>
 </tr>
 {% empty %}
 <tr>
@@ -530,6 +542,89 @@
 </div> <!-- card-body -->
 </div> <!-- card -->
 </div> <!-- container -->
+
+{% for r in recuperations %}
+<div class="modal fade" id="annulerRecup{{ r.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+
+    <form method="post"
+          action="{% url 'annuler_recuperation_drh' r.id %}">
+
+      {% csrf_token %}
+
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">
+            ❌ Annuler la récupération
+          </h5>
+
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal">
+          </button>
+        </div>
+
+        <div class="modal-body">
+
+          <p>
+            <strong>{{ r.utilisateur.get_full_name }}</strong>
+          </p>
+
+          <ul class="list-group mb-3">
+
+            <li class="list-group-item">
+              📅 Début :
+              {{ r.date_debut }}
+            </li>
+
+            <li class="list-group-item">
+              ⏱ {{ r.nombre_jours }} jour(s)
+            </li>
+
+            <li class="list-group-item">
+              📝 {{ r.motif }}
+            </li>
+
+          </ul>
+
+          <label class="form-label">
+            Motif de l'annulation
+          </label>
+
+          <textarea
+                name="motif"
+                class="form-control"
+                rows="4"
+                required></textarea>
+
+        </div>
+
+        <div class="modal-footer">
+
+          <button class="btn btn-danger">
+            Confirmer
+          </button>
+
+          <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal">
+
+              Fermer
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </form>
+
+  </div>
+</div>
+{% endfor %}
+
 
 <!-- ================================================= -->
 <!-- 🔁 MODALES (INCHANGÉES – TON CODE) -->

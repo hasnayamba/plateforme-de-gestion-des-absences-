@@ -26,7 +26,12 @@ urlpatterns = [
     path('soumettre_recuperation/', views.soumettre_recuperation, name='soumettre_recuperation'),
     path('recuperation/modifier/<int:recup_id>/', views.modifier_recuperation, name='modifier_recuperation'),
     path('recuperation/annuler/<int:recup_id>/', views.annuler_recuperation, name='annuler_recuperation'),
-
+    
+    path(
+    "drh/recuperation/<int:recup_id>/annuler/",
+    views.annuler_recuperation_drh,
+    name="annuler_recuperation_drh",
+),
 
 # -----------------------------#
 # Partie pour les superieurs   #

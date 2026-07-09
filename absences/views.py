@@ -1237,6 +1237,22 @@ def rejeter_absence_dp(request, absence_id):
             if absence.statut == 'verifie_drh' and absence.collaborateur.profile.superieur != request.user:
                 messages.error(request, "Vous ne pouvez pas rejeter cette absence (non sous votre supervision).")
                 return redirect('dashboard_dp')
+            
+            # =========================
+            # RESTAURATION DU QUOTA
+            # =========================
+            try:
+                quota = QuotaAbsence.objects.get(
+                    user=absence.collaborateur,
+                    type_absence=absence.type_absence,
+                    annee=absence.date_debut.year
+                )
+
+                quota.jours_disponibles += absence.nombre_jours
+                quota.save()
+
+            except QuotaAbsence.DoesNotExist:
+                pass
 
             absence.statut = 'rejete'
             absence.save()
@@ -1299,16 +1315,15 @@ def annuler_absence_drh(request, absence_id):
             pass  # sécurité
 
     # =========================
-    # 3️⃣ HARD DELETE
+    # 3️⃣ ANNULATION (SANS SUPPRESSION)
     # =========================
-    absence.delete()
+    absence.statut = "annulee"
+    absence.save()
 
     messages.success(
         request,
-        "Absence annulée définitivement par la DRH. Les dates sont à nouveau disponibles."
+        "Absence annulée par la DRH. Le quota a été restauré."
     )
-
-    return redirect('dashboard_drh')
 
 
 # -----------------------------
@@ -1366,6 +1381,35 @@ def annuler_recuperation_dp(request, recup_id):
         messages.error(request, "Impossible d'annuler cette récupération (non validée).")
     return redirect('dashboard_dp')
 
+@login_required
+def annuler_recuperation_drh(request, recup_id):
+
+    # Sécurité DRH
+    if request.user.profile.role != 'drh':
+        messages.error(request, "Action non autorisée.")
+        return redirect('dashboard_drh')
+
+    recup = get_object_or_404(Recuperation, id=recup_id)
+
+    if request.method != "POST":
+        return redirect("dashboard_drh")
+
+    motif = request.POST.get("motif", "").strip()
+
+    if not motif:
+        messages.error(request, "Le motif est obligatoire.")
+        return redirect("dashboard_drh")
+
+    recup.statut = "annulee"
+    recup.motif_annulation = motif
+    recup.save()
+
+    messages.success(
+        request,
+        "La récupération a été annulée par la DRH."
+    )
+
+    return redirect("dashboard_drh")
 
 @login_required
 def exporter_absences_excel(request):
