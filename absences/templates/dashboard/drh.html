@@ -241,13 +241,19 @@
     </button>
   </td>
   <td>
-    {% if a.statut == 'valide_dp' %}
+    {% if a.statut == 'en_attente'
+      or a.statut == 'verifie_drh'
+      or a.statut == 'approuve_superieur'
+      or a.statut == 'valide_dp' %}
+
     <button class="btn btn-outline-danger btn-sm"
-      data-bs-toggle="modal" data-bs-target="#annuler{{ a.id }}">
-      ❌ Annuler
+            data-bs-toggle="modal"
+            data-bs-target="#annuler{{ a.id }}">
+        ❌ Annuler
     </button>
+
     {% else %}
-    —
+    <span class="text-muted">—</span>
     {% endif %}
   </td>
 </tr>
@@ -782,7 +788,8 @@
           <textarea name="motif" class="form-control" rows="4" required></textarea>
 
           <div class="alert alert-warning mt-3 mb-0">
-            ⚠️ Suppression définitive de l’absence et restauration du quota.
+              ⚠️ Cette absence sera annulée par la DRH.
+              Si le quota a déjà été déduit, il sera automatiquement restauré.
           </div>
         </div>
 
