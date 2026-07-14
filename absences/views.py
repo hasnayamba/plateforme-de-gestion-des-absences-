@@ -1302,7 +1302,11 @@ def annuler_absence_drh(request, absence_id):
     # =========================
     # 2️⃣ RÉTABLIR LE QUOTA SI VALIDÉ DP
     # =========================
-    if absence.statut == 'valide_dp':
+    if absence.statut in [
+            'verifie_drh',
+            'approuve_superieur',
+            'valide_dp'
+        ]:
         try:
             quota = QuotaAbsence.objects.get(
                 user=absence.collaborateur,
