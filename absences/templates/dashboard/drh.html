@@ -241,10 +241,7 @@
     </button>
   </td>
   <td>
-    {% if a.statut == 'en_attente'
-      or a.statut == 'verifie_drh'
-      or a.statut == 'approuve_superieur'
-      or a.statut == 'valide_dp' %}
+    {% if a.statut != 'annulee' and a.statut != 'rejete' %}
 
     <button class="btn btn-outline-danger btn-sm"
             data-bs-toggle="modal"

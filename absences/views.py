@@ -1328,6 +1328,7 @@ def annuler_absence_drh(request, absence_id):
         request,
         "Absence annulée par la DRH. Le quota a été restauré."
     )
+    return redirect("dashboard_drh")
 
 
 # -----------------------------
