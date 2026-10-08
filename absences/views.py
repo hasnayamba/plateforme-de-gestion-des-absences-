@@ -1013,185 +1013,576 @@ def telecharger_justificatif(request, file_path):
 # Dashboard pour le Directeur Pays
 # -----------------------------
 
-
 @login_required
 def dashboard_dp(request):
+    """
+    Dashboard du Directeur Pays.
+
+    Cette vue conserve l'ensemble du contexte métier existant :
+    - historique des validations
+    - récupérations
+    - absences à valider
+    - absences planifiées
+    - absences validées
+    - récupérations validées
+    - récapitulatif avec filtres
+    - pagination de l'historique
+
+    Optimisations principales :
+    - select_related() sur toutes les relations FK utilisées par les templates
+    - une seule récupération des types d'absence
+    - parsing sécurisé des paramètres GET
+    - suppression des requêtes N+1 liées aux utilisateurs,
+      absences et types d'absence
+    """
+
+    # ==========================================================
+    # 1. PROFIL DU DP
+    # ==========================================================
+    #
+    # On conserve la récupération du profil pour ne pas modifier
+    # le comportement existant de la vue.
+    #
     profil = Profile.objects.get(user=request.user)
-    historiques = ValidationHistorique.objects.all().order_by('-date_validation')
-    recuperations = Recuperation.objects.all().order_by('-date_soumission')
 
-    # Fusionner les deux listes
-    donnees = list(historiques) + list(recuperations)
 
-    # Trier par date (la plus récente)
-    donnees.sort(
-        key=lambda x: x.date_validation if hasattr(x, 'date_validation') else x.date_soumission,
+    # ==========================================================
+    # 2. DONNÉES HISTORIQUES
+    # ==========================================================
+    #
+    # AVANT :
+    # ValidationHistorique.objects.all()
+    #
+    # Le template accède ensuite à :
+    #   h.absence
+    #   h.absence.collaborateur
+    #   h.absence.type_absence
+    #   h.utilisateur
+    #
+    # Sans select_related(), cela provoque énormément de requêtes SQL.
+    #
+    historiques = (
+        ValidationHistorique.objects
+        .select_related(
+            'absence',
+            'absence__collaborateur',
+            'absence__type_absence',
+            'utilisateur'
+        )
+        .order_by('-date_validation')
+    )
+
+
+    # ==========================================================
+    # 3. RÉCUPÉRATIONS POUR L'HISTORIQUE
+    # ==========================================================
+    #
+    # Le template peut accéder à r.utilisateur.
+    # On charge donc directement l'utilisateur.
+    #
+    recuperations = (
+        Recuperation.objects
+        .select_related('utilisateur')
+        .order_by('-date_soumission')
+    )
+
+
+    # ==========================================================
+    # 4. FUSION HISTORIQUE + RÉCUPÉRATIONS
+    # ==========================================================
+    #
+    # On conserve exactement le principe existant :
+    # fusionner les deux types de données puis trier par date.
+    #
+    donnees_historique = list(historiques) + list(recuperations)
+
+    donnees_historique.sort(
+        key=lambda objet: (
+            objet.date_validation
+            if hasattr(objet, 'date_validation')
+            else objet.date_soumission
+        ),
         reverse=True
     )
 
-    paginator = Paginator(donnees, 10)  
+
+    # ==========================================================
+    # 5. PAGINATION
+    # ==========================================================
+    #
+    # On conserve la pagination existante.
+    #
+    paginator = Paginator(donnees_historique, 10)
+
     page_number = request.GET.get('page')
+
     page_obj = paginator.get_page(page_number)
 
-    
-    # Collaborateurs sous la responsabilité du DP (où il est supérieur hiérarchique)
-    collaborateurs_sous_dp = Profile.objects.filter(superieur=request.user).values_list('user', flat=True)
 
-    # Absences à valider :
-    # - approuvées par les supérieurs (DP doit valider)
-    # - vérifiées par la RH mais dont le DP est aussi le supérieur hiérarchique direct
-    absences_a_valider_dp = Absence.objects.filter(
-        Q(statut='approuve_superieur') |
-        Q(statut='verifie_drh', collaborateur__in=collaborateurs_sous_dp)
-    ).select_related('collaborateur', 'type_absence').order_by('date_debut')
+    # ==========================================================
+    # 6. COLLABORATEURS SOUS LA RESPONSABILITÉ DU DP
+    # ==========================================================
+    #
+    # Le DP peut également être supérieur hiérarchique direct.
+    #
+    collaborateurs_sous_dp = (
+        Profile.objects
+        .filter(superieur=request.user)
+        .values_list('user', flat=True)
+    )
 
-    # Absences planifiées visibles par le DP
-    mois_selectionne = int(request.GET.get('mois', datetime.now().month))
+
+    # ==========================================================
+    # 7. ABSENCES À VALIDER PAR LE DP
+    # ==========================================================
+    #
+    # Cas 1 :
+    #   absence approuvée par le supérieur
+    #
+    # Cas 2 :
+    #   absence vérifiée par la DRH
+    #   ET collaborateur sous la responsabilité directe du DP
+    #
+    # select_related() évite les requêtes supplémentaires
+    # lorsque le template affiche le collaborateur et le type.
+    #
+    absences_a_valider_dp = (
+        Absence.objects
+        .filter(
+            Q(statut='approuve_superieur') |
+            Q(
+                statut='verifie_drh',
+                collaborateur__in=collaborateurs_sous_dp
+            )
+        )
+        .select_related(
+            'collaborateur',
+            'type_absence'
+        )
+        .order_by('date_debut')
+    )
+
+
+    # ==========================================================
+    # 8. MOIS SÉLECTIONNÉ POUR LES ABSENCES PLANIFIÉES
+    # ==========================================================
+    #
+    # Valeur par défaut = mois actuel.
+    #
+    mois_param = request.GET.get('mois')
+
+    try:
+        mois_selectionne = int(
+            mois_param
+            if mois_param is not None
+            else datetime.now().month
+        )
+
+        # Sécurité supplémentaire :
+        # un mois doit obligatoirement être compris entre 1 et 12.
+        if mois_selectionne < 1 or mois_selectionne > 12:
+            mois_selectionne = datetime.now().month
+
+    except (TypeError, ValueError):
+        mois_selectionne = datetime.now().month
+
+
+    # ==========================================================
+    # 9. TYPE D'ABSENCE SÉLECTIONNÉ
+    # ==========================================================
+    #
+    # On conserve la logique :
+    # type_id peut être absent.
+    #
     type_id = request.GET.get('type')
 
-    absences_planifiees = Absence.objects.filter(
-        Q(statut__in=['en_attente', 'approuve_superieur', 'verifie_drh', 'valide_dp']),
-        date_debut__month=mois_selectionne
-    ).select_related('collaborateur', 'type_absence')
+    type_id_int = None
 
     if type_id:
-        absences_planifiees = absences_planifiees.filter(type_absence_id=type_id)
+        try:
+            type_id_int = int(type_id)
+        except (TypeError, ValueError):
+            type_id_int = None
+
+
+    # ==========================================================
+    # 10. ABSENCES PLANIFIÉES
+    # ==========================================================
+    #
+    # On conserve exactement les statuts existants.
+    #
+    absences_planifiees = (
+        Absence.objects
+        .filter(
+            Q(
+                statut__in=[
+                    'en_attente',
+                    'approuve_superieur',
+                    'verifie_drh',
+                    'valide_dp'
+                ]
+            ),
+            date_debut__month=mois_selectionne
+        )
+        .select_related(
+            'collaborateur',
+            'type_absence'
+        )
+    )
+
+    # Filtre par type si demandé
+    if type_id_int is not None:
+        absences_planifiees = absences_planifiees.filter(
+            type_absence_id=type_id_int
+        )
 
     absences_planifiees = absences_planifiees.order_by('date_debut')
 
-    absences_validees = Absence.objects.filter(
-        statut='valide_dp'
-    ).order_by('date_debut')
-    
-    recuperations_validees = Recuperation.objects.filter(
-        statut='valide'
-    )
-    # --- Gestion des récupérations --- #
-    recuperation = Recuperation.objects.filter(
-        statut='verifie_drh'
-    ).select_related('utilisateur').order_by('-date_soumission')
 
+    # ==========================================================
+    # 11. ABSENCES VALIDÉES
+    # ==========================================================
+    #
+    # IMPORTANT :
+    # C'était l'une des principales sources du N+1.
+    #
+    # Le calendrier annuel utilise notamment :
+    #
+    #   absence.collaborateur.get_full_name
+    #   absence.type_absence.nom
+    #   absence.type_absence.couleur
+    #
+    # On charge donc immédiatement ces relations.
+    #
+    absences_validees = (
+        Absence.objects
+        .filter(statut='valide_dp')
+        .select_related(
+            'collaborateur',
+            'type_absence'
+        )
+        .order_by('date_debut')
+    )
+
+
+    # ==========================================================
+    # 12. RÉCUPÉRATIONS VALIDÉES
+    # ==========================================================
+    #
+    # Le calendrier utilise :
+    #
+    #   recuperation.utilisateur.get_full_name
+    #
+    # On charge donc directement l'utilisateur.
+    #
+    recuperations_validees = (
+        Recuperation.objects
+        .filter(statut='valide')
+        .select_related('utilisateur')
+    )
+
+
+    # ==========================================================
+    # 13. RÉCUPÉRATIONS À VALIDER PAR LE DP
+    # ==========================================================
+    #
+    # Le DP voit les récupérations déjà vérifiées par la DRH.
+    #
+    recuperation = (
+        Recuperation.objects
+        .filter(statut='verifie_drh')
+        .select_related('utilisateur')
+        .order_by('-date_soumission')
+    )
+
+
+    # ==========================================================
+    # 14. CALCUL DES DATES DE FIN DES RÉCUPÉRATIONS
+    # ==========================================================
+    #
+    # On conserve la logique existante.
+    #
     for recup in recuperation:
-        recup.date_fin = calculer_date_fin(
-            recup.date_debut,
-            recup.nombre_jours
-        )
+        try:
+            recup.date_fin = calculer_date_fin(
+                recup.date_debut,
+                recup.nombre_jours
+            )
+        except Exception:
+            recup.date_fin = recup.date_debut
+
+
     for recupfin in recuperations_validees:
-        recupfin.date_fin = calculer_date_fin(
-            recupfin.date_debut,
-            recupfin.nombre_jours
-        )
+        try:
+            recupfin.date_fin = calculer_date_fin(
+                recupfin.date_debut,
+                recupfin.nombre_jours
+            )
+        except Exception:
+            recupfin.date_fin = recupfin.date_debut
+
+
+    # ==========================================================
+    # 15. TYPES D'ABSENCE
+    # ==========================================================
+    #
+    # Une seule QuerySet est créée et réutilisée dans le contexte.
+    #
     types = TypeAbsence.objects.all()
-    mois_list = [(i, month_name[i]) for i in range(1, 13)]
-    
-# ============================
-    # FILTRES RÉCAP
-    # ============================
+
+
+    # ==========================================================
+    # 16. LISTE DES MOIS
+    # ==========================================================
+    #
+    mois_list = [
+        (i, month_name[i])
+        for i in range(1, 13)
+    ]
+
+
+    # ==========================================================
+    # 17. FILTRES DU RÉCAPITULATIF
+    # ==========================================================
+    #
     mois_recap = request.GET.get('mois_recap')
     type_recap = request.GET.get('type_recap')
     collab_recap = request.GET.get('collab_recap')
     statut_recap = request.GET.get('statut_recap')
 
-    # ============================
-    # ABSENCES (TOUTES)
-    # ============================
-    absences_qs = Absence.objects.select_related(
-        'collaborateur', 'type_absence'
+
+    # ==========================================================
+    # 18. QUERYSET ABSENCES DU RÉCAPITULATIF
+    # ==========================================================
+    #
+    # Les relations utilisées par le template sont chargées
+    # directement.
+    #
+    absences_qs = (
+        Absence.objects
+        .select_related(
+            'collaborateur',
+            'type_absence'
+        )
     )
 
-    if mois_recap:
-        absences_qs = absences_qs.filter(date_debut__month=mois_recap)
 
+    # Filtre mois
+    if mois_recap:
+        absences_qs = absences_qs.filter(
+            date_debut__month=mois_recap
+        )
+
+
+    # Filtre type
     if type_recap:
-        absences_qs = absences_qs.filter(type_absence_id=type_recap)
+        absences_qs = absences_qs.filter(
+            type_absence_id=type_recap
+        )
 
+
+    # Filtre collaborateur
     if collab_recap:
-        absences_qs = absences_qs.filter(collaborateur_id=collab_recap)
+        absences_qs = absences_qs.filter(
+            collaborateur_id=collab_recap
+        )
 
+
+    # Filtre statut
     if statut_recap:
-        absences_qs = absences_qs.filter(statut=statut_recap)
+        absences_qs = absences_qs.filter(
+            statut=statut_recap
+        )
 
-    # ============================
-    # RÉCUPÉRATIONS
-    # ============================
-    recups_qs = Recuperation.objects.select_related('utilisateur')
 
+    # ==========================================================
+    # 19. QUERYSET RÉCUPÉRATIONS DU RÉCAPITULATIF
+    # ==========================================================
+    #
+    recups_qs = (
+        Recuperation.objects
+        .select_related('utilisateur')
+    )
+
+
+    # Filtre mois
     if mois_recap:
-        recups_qs = recups_qs.filter(date_debut__month=mois_recap)
+        recups_qs = recups_qs.filter(
+            date_debut__month=mois_recap
+        )
 
+
+    # Filtre collaborateur
     if collab_recap:
-        recups_qs = recups_qs.filter(utilisateur_id=collab_recap)
+        recups_qs = recups_qs.filter(
+            utilisateur_id=collab_recap
+        )
 
+
+    # Filtre statut
     if statut_recap:
-        recups_qs = recups_qs.filter(statut=statut_recap)
+        recups_qs = recups_qs.filter(
+            statut=statut_recap
+        )
 
-    # ============================
-    # FUSION DES DONNÉES
-    # ============================
+
+    # ==========================================================
+    # 20. CONSTRUCTION DU RÉCAPITULATIF
+    # ==========================================================
+    #
+    # On conserve le fonctionnement actuel :
+    #
+    # Absence       -> type_demande = "Absence"
+    # Récupération  -> type_demande = "Récupération"
+    #
     donnees = []
 
-    for a in absences_qs:
+
+    # ----------------------------------------------------------
+    # Absences
+    # ----------------------------------------------------------
+
+    for absence in absences_qs:
+
         try:
             date_fin = calculer_date_fin(
-            a.date_debut,
-            a.nombre_jours
-        )
+                absence.date_debut,
+                absence.nombre_jours
+            )
         except Exception:
-            date_fin = a.date_debut
+            date_fin = absence.date_debut
 
-        a.type_demande = "Absence"
-        a.date_fin_calculee = date_fin
-        donnees.append(a)
+        absence.type_demande = "Absence"
+        absence.date_fin_calculee = date_fin
 
-    for r in recups_qs:
+        donnees.append(absence)
+
+
+    # ----------------------------------------------------------
+    # Récupérations
+    # ----------------------------------------------------------
+
+    for recup in recups_qs:
+
         try:
             date_fin = calculer_date_fin(
-            r.date_debut,
-            r.nombre_jours
-        )
+                recup.date_debut,
+                recup.nombre_jours
+            )
         except Exception:
-            date_fin = r.date_debut
+            date_fin = recup.date_debut
 
-        r.type_demande = "Récupération"
-        r.date_fin_calculee = date_fin
-        donnees.append(r)
+        recup.type_demande = "Récupération"
+        recup.date_fin_calculee = date_fin
 
-    donnees.sort(key=lambda x: x.date_debut)
+        donnees.append(recup)
 
-    # ============================
-    # DONNÉES POUR FILTRES
-    # ============================
-    types = TypeAbsence.objects.all()
-    collaborateurs = Profile.objects.select_related('user')
-    mois_list = [(i, month_name[i]) for i in range(1, 13)]
 
+    # ==========================================================
+    # 21. TRI DU RÉCAPITULATIF
+    # ==========================================================
+    #
+    # Même comportement qu'avant :
+    # tri par date de début.
+    #
+    donnees.sort(
+        key=lambda objet: objet.date_debut
+    )
+
+
+    # ==========================================================
+    # 22. COLLABORATEURS POUR LES FILTRES
+    # ==========================================================
+    #
+    # select_related('user') est important car le template
+    # utilise les informations de l'utilisateur.
+    #
+    collaborateurs = (
+        Profile.objects
+        .select_related('user')
+    )
+
+
+    # ==========================================================
+    # 23. CONTEXTE FINAL
+    # ==========================================================
+    #
+    # IMPORTANT :
+    # Les noms des variables sont conservés exactement comme
+    # dans la vue originale afin de ne pas casser le template.
+    #
     context = {
+        # ------------------------------------------------------
+        # Récapitulatif
+        # ------------------------------------------------------
         "donnees": donnees,
-        # filtres
+
+        # ------------------------------------------------------
+        # Filtres
+        # ------------------------------------------------------
         "types": types,
         "collaborateurs": collaborateurs,
         "statuts": STATUT_ABSENCE,
         "mois_list": mois_list,
-        # valeurs sélectionnées
+
         "mois_recap": mois_recap,
         "type_recap": type_recap,
         "collab_recap": collab_recap,
         "statut_recap": statut_recap,
-        'absences_planifiees': absences_planifiees,
-        'absences_a_valider_dp': absences_a_valider_dp,
-        'absences_validees': absences_validees,
-        'recuperations_validees': recuperations_validees,
-        'recuperation': recuperation,
-        'mois_list': mois_list,
-        'mois_selectionne': mois_selectionne,
-        'types': types,
-        'type_selectionne': int(type_id) if type_id else None,
-        'historiques': historiques,
-        'recuperations': recuperations,
-        'page_obj': page_obj,
-    }
-    return render(request, 'dashboard/dp.html', context)
 
+        # ------------------------------------------------------
+        # Absences planifiées
+        # ------------------------------------------------------
+        "absences_planifiees": absences_planifiees,
+
+        # ------------------------------------------------------
+        # Absences à valider par le DP
+        # ------------------------------------------------------
+        "absences_a_valider_dp": absences_a_valider_dp,
+
+        # ------------------------------------------------------
+        # Calendrier annuel
+        # ------------------------------------------------------
+        "absences_validees": absences_validees,
+        "recuperations_validees": recuperations_validees,
+
+        # ------------------------------------------------------
+        # Récupérations à valider
+        # ------------------------------------------------------
+        "recuperation": recuperation,
+
+        # ------------------------------------------------------
+        # Mois sélectionné
+        # ------------------------------------------------------
+        "mois_selectionne": mois_selectionne,
+
+        # ------------------------------------------------------
+        # Type sélectionné
+        # ------------------------------------------------------
+        "type_selectionne": type_id_int,
+
+        # ------------------------------------------------------
+        # Historique
+        # ------------------------------------------------------
+        "historiques": historiques,
+        "recuperations": recuperations,
+
+        # ------------------------------------------------------
+        # Pagination
+        # ------------------------------------------------------
+        "page_obj": page_obj,
+    }
+
+
+    # ==========================================================
+    # 24. RENDU
+    # ==========================================================
+
+    return render(
+        request,
+        'dashboard/dp.html',
+        context
+    )
 
 # -----------------------------
 # Absences DP
